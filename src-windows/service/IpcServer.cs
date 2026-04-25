@@ -1,28 +1,33 @@
 using System.IO.Pipes;
-using System.Net;
-using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using Gnd.Windows.Shared;
+using Gnd.Windows.Grpc;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
 
 namespace Gnd.Windows.Service;
 
 /// <summary>
-/// gRPC service implementation with Named Pipe fallback for Windows Service compatibility.
+/// IPC Server managing both gRPC and Named Pipe communication.
 /// Routes messages to device providers (Miracast, Chromecast).
 /// </summary>
-public class IpcServer
+public class IpcServer : IDisposable
 {
     private readonly ILogger<IpcServer> _logger;
     private readonly Dictionary<string, Func<IpcMessage, Task<IpcMessage>>> _handlers = new();
     private CancellationTokenSource? _cts;
-    private Task? _grpcServerTask;
+    private Server? _grpcServer;
     private Task? _namedPipeServerTask;
+    private bool _disposed;
 
-    private const int GrpcPort = 5050;
-    private const string NamedPipeName = "gnome-network-displays-ipc";
+    public const int GrpcPort = 5050;
+    public const string NamedPipeName = "gnome-network-displays-ipc";
+
+    // Events for device state changes
+    public event EventHandler<DeviceEventArgs>? DeviceFound;
+    public event EventHandler<DeviceEventArgs>? DeviceLost;
+    public event EventHandler<DeviceEventArgs>? DeviceStateChanged;
 
     public IpcServer(ILogger<IpcServer> logger)
     {
@@ -44,22 +49,24 @@ public class IpcServer
     {
         _cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-        // Start Named Pipe server (primary for Windows Service reliability)
+        // Start Named Pipe server (for internal service communication)
         _namedPipeServerTask = RunNamedPipeServerAsync(_cts.Token);
 
-        // Start gRPC server (for WinUI 3 client communication)
-        _grpcServerTask = RunGrpcServerAsync(_cts.Token);
+        // Note: gRPC server is started via UseGrpcWeb() in Program.cs
+        // This is for direct gRPC access if needed
 
-        await Task.WhenAny(_namedPipeServerTask, _grpcServerTask);
+        _logger.LogInformation("IPC Server started");
+        await Task.CompletedTask;
     }
 
     public async Task StopAsync(CancellationToken cancellationToken)
     {
+        _logger.LogInformation("IPC Server stopping");
         _cts?.Cancel();
 
-        if (_grpcServerTask != null)
+        if (_grpcServer != null)
         {
-            await Task.WhenAny(_grpcServerTask, Task.Delay(Timeout.Infinite, cancellationToken));
+            await _grpcServer.ShutdownAsync();
         }
 
         if (_namedPipeServerTask != null)
@@ -68,17 +75,25 @@ public class IpcServer
         }
     }
 
-    private async Task RunGrpcServerAsync(CancellationToken cancellationToken)
+    /// <summary>
+    /// Start the gRPC server directly (alternative to using Kestrel)
+    /// </summary>
+    public async Task StartGrpcServerAsync(CancellationToken cancellationToken)
     {
         _logger.LogInformation("Starting gRPC server on port {Port}", GrpcPort);
 
-        var server = new Grpc.Core.Server
+        _grpcServer = new Grpc.Core.Server
         {
-            Services = { IpcService.BindService(new GrpcIpcService(this)) },
+            Services =
+            {
+                GndService.BindService(new GndGrpcService(
+                    LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger<GndGrpcService>(),
+                    null!))
+            },
             Ports = { new ServerPort("localhost", GrpcPort, ServerCredentials.Insecure) }
         };
 
-        server.Start();
+        _grpcServer.Start();
         _logger.LogInformation("gRPC server started on port {Port}", GrpcPort);
 
         try
@@ -91,7 +106,7 @@ public class IpcServer
         }
         finally
         {
-            await server.ShutdownAsync();
+            await _grpcServer.ShutdownAsync();
         }
     }
 
@@ -175,42 +190,49 @@ public class IpcServer
         return CreateErrorResponse(message, $"Unknown action: {message.Action}");
     }
 
+    // Handler implementations - these would normally interact with providers
     private Task<IpcMessage> HandleDiscover(IpcMessage message)
     {
-        // TODO: Implement device discovery via providers
-        _logger.LogInformation("Discover requested - providers not yet implemented");
-        return Task.FromResult(CreateSuccessResponse(message, "Discover started"));
+        _logger.LogInformation("Discover requested");
+        // TODO: Start discovery via providers
+        DeviceFound?.Invoke(this, new DeviceEventArgs { Device = CreateStubDevice() });
+        return Task.FromResult(CreateSuccessResponse(message, "Discovery started"));
     }
 
     private Task<IpcMessage> HandleGetDevices(IpcMessage message)
     {
-        // TODO: Return list of discovered devices
-        var devices = new List<DeviceInfo>();
+        _logger.LogInformation("GetDevices requested");
+        // TODO: Return list of discovered devices from providers
+        var devices = new List<DeviceInfo> { CreateStubDevice() };
         var payload = JsonSerializer.Serialize(devices);
         return Task.FromResult(CreateSuccessResponse(message, payload));
     }
 
     private Task<IpcMessage> HandleConnect(IpcMessage message)
     {
-        // TODO: Connect to device
+        _logger.LogInformation("Connect requested");
+        // TODO: Connect via appropriate provider (Miracast or Chromecast)
         return Task.FromResult(CreateSuccessResponse(message, "Connected"));
     }
 
     private Task<IpcMessage> HandleDisconnect(IpcMessage message)
     {
-        // TODO: Disconnect from device
+        _logger.LogInformation("Disconnect requested");
+        // TODO: Disconnect via provider
         return Task.FromResult(CreateSuccessResponse(message, "Disconnected"));
     }
 
     private Task<IpcMessage> HandleStreamStart(IpcMessage message)
     {
-        // TODO: Start streaming
+        _logger.LogInformation("StreamStart requested");
+        // TODO: Start stream via provider
         return Task.FromResult(CreateSuccessResponse(message, "Streaming started"));
     }
 
     private Task<IpcMessage> HandleStreamStop(IpcMessage message)
     {
-        // TODO: Stop streaming
+        _logger.LogInformation("StreamStop requested");
+        // TODO: Stop stream via provider
         return Task.FromResult(CreateSuccessResponse(message, "Streaming stopped"));
     }
 
@@ -233,68 +255,34 @@ public class IpcServer
             Payload = JsonSerializer.Serialize(new { Error = error })
         };
     }
-}
 
-/// <summary>
-/// gRPC service implementation.
-/// </summary>
-public class IpcService : Ipc.IpcBase
-{
-    private readonly IpcServer _server;
-
-    public IpcService(IpcServer server)
+    private static DeviceInfo CreateStubDevice()
     {
-        _server = server;
-    }
-
-    public override async Task<IpcResponse> SendMessage(IpcRequest request, ServerCallContext context)
-    {
-        var message = new IpcMessage
+        return new DeviceInfo
         {
-            RequestId = request.RequestId,
-            Action = Enum.Parse<IpcAction>(request.Action),
-            Payload = request.Payload
-        };
-
-        var response = await _server.ProcessMessageAsync(message);
-
-        return new IpcResponse
-        {
-            RequestId = response.RequestId,
-            Action = response.Action.ToString(),
-            Payload = response.Payload
+            Id = "stub-" + Guid.NewGuid().ToString("N")[..8],
+            Name = "Stub Device",
+            IpAddress = "192.168.1.100",
+            Type = DeviceType.Miracast,
+            State = DeviceState.Available
         };
     }
-}
 
-// Placeholder for gRPC generated code
-public class Ipc
-{
-    public class IpcBase
+    public void Dispose()
     {
-        public virtual Task<IpcResponse> SendMessage(IpcRequest request, ServerCallContext context)
+        if (!_disposed)
         {
-            throw new RpcException(new Status(StatusCode.Unimplemented, ""));
+            _cts?.Cancel();
+            _grpcServer?.ShutdownAsync().Wait();
+            _disposed = true;
         }
     }
+}
 
-    public class IpcClient
-    {
-        public IpcClient(Channel channel) { }
-        public virtual Task<IpcResponse> SendMessage(IpcRequest request, CallOptions? options = null) { throw new RpcException(new Status(StatusCode.Unimplemented, "")); }
-    }
-
-    public class IpcRequest
-    {
-        public string RequestId { get; set; } = string.Empty;
-        public string Action { get; set; } = string.Empty;
-        public string Payload { get; set; } = string.Empty;
-    }
-
-    public class IpcResponse
-    {
-        public string RequestId { get; set; } = string.Empty;
-        public string Action { get; set; } = string.Empty;
-        public string Payload { get; set; } = string.Empty;
-    }
+public class DeviceEventArgs : EventArgs
+{
+    public required DeviceInfo Device { get; init; }
+    public string? Message { get; init; }
+    public DeviceState? OldState { get; init; }
+    public DeviceState? NewState { get; init; }
 }

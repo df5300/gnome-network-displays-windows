@@ -1,0 +1,192 @@
+syntax = "proto3";
+
+package gnd;
+
+option csharp_namespace = "Gnd.Windows.Grpc";
+
+// Device types
+enum DeviceType {
+  DEVICE_TYPE_UNSPECIFIED = 0;
+  DEVICE_TYPE_MIRACAST = 1;
+  DEVICE_TYPE_CHROMECAST = 2;
+}
+
+// Device state
+enum DeviceState {
+  DEVICE_STATE_UNSPECIFIED = 0;
+  DEVICE_STATE_AVAILABLE = 1;
+  DEVICE_STATE_CONNECTING = 2;
+  DEVICE_STATE_CONNECTED = 3;
+  DEVICE_STATE_STREAMING = 4;
+  DEVICE_STATE_ERROR = 5;
+}
+
+// Video codec
+enum VideoCodec {
+  VIDEO_CODEC_UNSPECIFIED = 0;
+  VIDEO_CODEC_H264 = 1;
+  VIDEO_CODEC_H265 = 2;
+  VIDEO_CODEC_VP8 = 3;
+  VIDEO_CODEC_VP9 = 4;
+}
+
+// Audio codec
+enum AudioCodec {
+  AUDIO_CODEC_UNSPECIFIED = 0;
+  AUDIO_CODEC_AAC = 1;
+  AUDIO_CODEC_LPCM = 2;
+  AUDIO_CODEC_OPUS = 3;
+  AUDIO_CODEC_AC3 = 4;
+}
+
+// Device information
+message DeviceInfo {
+  string id = 1;
+  string name = 2;
+  string ip_address = 3;
+  int32 port = 4;
+  DeviceType type = 5;
+  DeviceState state = 6;
+  map<string, string> properties = 7;
+}
+
+// Device capabilities
+message DeviceCapabilities {
+  repeated VideoCodec supported_video_codecs = 1;
+  repeated AudioCodec supported_audio_codecs = 2;
+  repeated string supported_resolutions = 3;
+  bool supports_audio = 4;
+  bool supports_video = 5;
+}
+
+// Transport configuration
+message TransportConfig {
+  string local_ip = 1;
+  int32 video_port = 2;
+  int32 audio_port = 3;
+  TransportType type = 4;
+  enum TransportType {
+    TRANSPORT_TYPE_UNSPECIFIED = 0;
+    TRANSPORT_TYPE_UDP = 1;
+    TRANSPORT_TYPE_TCP = 2;
+  }
+}
+
+// ============ Service RPC ============
+
+service GndService {
+  // Device discovery
+  rpc StartDiscovery(StartDiscoveryRequest) returns (StartDiscoveryResponse);
+  rpc StopDiscovery(StopDiscoveryRequest) returns (StopDiscoveryResponse);
+  rpc GetDevices(GetDevicesRequest) returns (GetDevicesResponse);
+
+  // Device connection
+  rpc Connect(ConnectRequest) returns (ConnectResponse);
+  rpc Disconnect(DisconnectRequest) returns (DisconnectResponse);
+
+  // Streaming
+  rpc StartStream(StartStreamRequest) returns (StartStreamResponse);
+  rpc StopStream(StopStreamRequest) returns (StopStreamResponse);
+
+  // Event subscriptions
+  rpc StreamEvents(StreamEventsRequest) returns (stream DeviceEvent);
+}
+
+// Discovery
+message StartDiscoveryRequest {
+  bool force_refresh = 1;
+}
+
+message StartDiscoveryResponse {
+  bool success = 1;
+  string error_message = 2;
+}
+
+message StopDiscoveryRequest {}
+
+message StopDiscoveryResponse {
+  bool success = 1;
+}
+
+message GetDevicesRequest {}
+
+message GetDevicesResponse {
+  repeated DeviceInfo devices = 1;
+}
+
+// Connection
+message ConnectRequest {
+  string device_id = 1;
+}
+
+message ConnectResponse {
+  bool success = 1;
+  string error_message = 2;
+  DeviceCapabilities capabilities = 3;
+}
+
+message DisconnectRequest {
+  string device_id = 1;
+}
+
+message DisconnectResponse {
+  bool success = 1;
+  string error_message = 2;
+}
+
+// Streaming
+message StartStreamRequest {
+  string device_id = 1;
+  TransportConfig transport = 2;
+  VideoCodec preferred_video_codec = 3;
+  AudioCodec preferred_audio_codec = 4;
+}
+
+message StartStreamResponse {
+  bool success = 1;
+  string error_message = 2;
+  string stream_url = 3;
+}
+
+message StopStreamRequest {
+  string device_id = 1;
+}
+
+message StopStreamResponse {
+  bool success = 1;
+  string error_message = 2;
+}
+
+// Events
+message StreamEventsRequest {
+  repeated DeviceEventType events = 1;
+
+  enum DeviceEventType {
+    EVENT_TYPE_UNSPECIFIED = 0;
+    EVENT_TYPE_DEVICE_FOUND = 1;
+    EVENT_TYPE_DEVICE_LOST = 2;
+    EVENT_TYPE_STATE_CHANGED = 3;
+    EVENT_TYPE_ERROR = 4;
+    EVENT_TYPE_STREAM_STARTED = 5;
+    EVENT_TYPE_STREAM_STOPPED = 6;
+  }
+}
+
+message DeviceEvent {
+  DeviceEventType type = 1;
+  string device_id = 2;
+  DeviceInfo device = 3;
+  string message = 4;
+  DeviceState new_state = 5;
+  DeviceState old_state = 6;
+
+  enum DeviceEventType {
+    EVENT_TYPE_UNSPECIFIED = 0;
+    EVENT_TYPE_DEVICE_FOUND = 1;
+    EVENT_TYPE_DEVICE_LOST = 2;
+    EVENT_TYPE_STATE_CHANGED = 3;
+    EVENT_TYPE_ERROR = 4;
+    EVENT_TYPE_STREAM_STARTED = 5;
+    EVENT_TYPE_STREAM_STOPPED = 6;
+  }
+}
