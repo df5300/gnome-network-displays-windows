@@ -3,30 +3,33 @@ using Gnd.Windows.Shared.Platform;
 
 namespace Gnd.Windows.Shared.Discovery;
 
-public class WiFiDirectDiscovery : IDeviceDiscovery, IDisposable {
-    private IntPtr _wlanHandle;
-    private uint _negotiatedVersion;
-    private bool _disposed;
+/// <summary>
+/// Wi-Fi Direct device discovery using Windows WFD API
+/// </summary>
+public class WiFiDirectDiscovery : IDeviceDiscovery, IDisposable
+{
+    private WiFiDirectHelper? _wfdHelper;
     private CancellationTokenSource? _cts;
     private readonly ConcurrentDictionary<string, DeviceInfo> _devices = new();
     private Task? _discoveryTask;
+    private bool _disposed;
 
     public event EventHandler<DeviceDiscoveredEventArgs>? DeviceFound;
     public event EventHandler<string>? DeviceLost;
 
-    public async Task StartDiscoveryAsync(CancellationToken ct) {
-        if (_wlanHandle != IntPtr.Zero) {
+    public async Task StartDiscoveryAsync(CancellationToken ct)
+    {
+        if (_wfdHelper != null)
             return;
+
+        try
+        {
+            _wfdHelper = new WiFiDirectHelper();
         }
-
-        uint result = WlanApi.WlanOpenHandle(
-            WlanApi.WLAN_API_VERSION,
-            IntPtr.Zero,
-            out _negotiatedVersion,
-            out _wlanHandle);
-
-        if (result != 0) {
-            throw new InvalidOperationException($"Failed to open WLAN handle: {result}");
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to initialize Wi-Fi Direct: {ex.Message}");
+            return;
         }
 
         _cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
@@ -34,101 +37,171 @@ public class WiFiDirectDiscovery : IDeviceDiscovery, IDisposable {
         await Task.CompletedTask;
     }
 
-    private async Task DiscoverDevicesAsync(CancellationToken ct) {
-        while (!ct.IsCancellationRequested && _wlanHandle != IntPtr.Zero) {
-            try {
-                EnumerateWfdDevices();
-                await Task.Delay(5000, ct);
-            } catch (OperationCanceledException) {
+    private async Task DiscoverDevicesAsync(CancellationToken ct)
+    {
+        System.Diagnostics.Debug.WriteLine("WiFiDirectDiscovery: Starting device discovery");
+
+        while (!ct.IsCancellationRequested && _wfdHelper != null)
+        {
+            try
+            {
+                // Get interfaces and scan
+                var interfaces = _wfdHelper.GetInterfaces();
+                foreach (var iface in interfaces)
+                {
+                    try
+                    {
+                        // Trigger a scan for fresh data
+                        _wfdHelper.Scan(iface.InterfaceGuid);
+
+                        // Small delay to allow scan to start
+                        await Task.Delay(500, ct);
+
+                        // Get available networks
+                        var networks = _wfdHelper.GetAvailableNetworks(iface.InterfaceGuid);
+                        ProcessNetworks(iface.InterfaceGuid, networks);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Error scanning interface {iface.InterfaceGuid}: {ex.Message}");
+                    }
+                }
+
+                await Task.Delay(5000, ct); // Scan every 5 seconds
+            }
+            catch (OperationCanceledException)
+            {
                 break;
-            } catch {
-                // Continue discovery attempts
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Discovery error: {ex.Message}");
                 await Task.Delay(5000, ct);
             }
         }
+
+        System.Diagnostics.Debug.WriteLine("WiFiDirectDiscovery: Discovery stopped");
     }
 
-    private void EnumerateWfdDevices() {
-        var interfaces = GetWlanInterfaces();
+    private void ProcessNetworks(Guid interfaceGuid, List<WLAN_AVAILABLE_NETWORK> networks)
+    {
         var currentDeviceIds = new HashSet<string>();
 
-        foreach (var iface in interfaces) {
-            IntPtr networkList = IntPtr.Zero;
-            try {
-                uint result = WlanApi.WlanGetAvailableNetworkList(
-                    _wlanHandle,
-                    ref iface,
-                    0,
-                    IntPtr.Zero,
-                    out networkList);
+        foreach (var network in networks)
+        {
+            // Check if this is a Wi-Fi Direct network
+            // WFD networks typically have specific naming patterns or capabilities
+            if (IsWiFiDirectNetwork(network))
+            {
+                var device = CreateDeviceFromNetwork(network, interfaceGuid);
+                if (device != null)
+                {
+                    currentDeviceIds.Add(device.Id);
 
-                if (result == 0 && networkList != IntPtr.Zero) {
-                    // Parse network list and identify WFD devices
-                    // Note: Full WFD enumeration requires additional Windows APIs
-                    // This is a simplified implementation
-                    var wfdDevices = ParseWfdNetworks(networkList);
-                    foreach (var device in wfdDevices) {
-                        currentDeviceIds.Add(device.Id);
-                        if (_devices.TryAdd(device.Id, device)) {
-                            DeviceFound?.Invoke(this, new DeviceDiscoveredEventArgs { Device = device });
-                        }
+                    if (_devices.TryAdd(device.Id, device))
+                    {
+                        System.Diagnostics.Debug.WriteLine($"WiFiDirectDiscovery: Found device {device.Name}");
+                        DeviceFound?.Invoke(this, new DeviceDiscoveredEventArgs { Device = device });
                     }
-                }
-            } finally {
-                if (networkList != IntPtr.Zero) {
-                    WlanApi.WlanFreeMemory(networkList);
                 }
             }
         }
 
         // Check for lost devices
-        foreach (var removedId in _devices.Keys.Except(currentDeviceIds)) {
-            if (_devices.TryRemove(removedId, out _)) {
+        foreach (var removedId in _devices.Keys.Except(currentDeviceIds))
+        {
+            if (_devices.TryRemove(removedId, out var removedDevice))
+            {
+                System.Diagnostics.Debug.WriteLine($"WiFiDirectDiscovery: Device lost {removedDevice.Name}");
                 DeviceLost?.Invoke(this, removedId);
             }
         }
     }
 
-    private List<DeviceInfo> ParseWfdNetworks(IntPtr networkList) {
-        var devices = new List<DeviceInfo>();
-        // Wi-Fi Direct device enumeration implementation
-        // In production, this would parse the actual WFD IE structures
-        // and filter for devices with WFD capability
-        return devices;
+    private bool IsWiFiDirectNetwork(WLAN_AVAILABLE_NETWORK network)
+    {
+        // Wi-Fi Direct networks often have specific characteristics:
+        // 1. Network name starts with "DIRECT-" (Windows convention)
+        // 2. Or has specific security settings
+        // 3. Or has "Wi-Fi Direct" capability flag
+
+        var networkName = network.strNetworkName ?? string.Empty;
+
+        // Check for common WFD naming patterns
+        if (networkName.StartsWith("DIRECT-", StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        // Check for Hotspot2.0 / Passpoint (often used with WFD)
+        if (network.AuthenticationAndCipher.AuthAlgo == DOT11_AUTH_ALGORITHM.DOT11_AUTH_ALGO_WPA3 ||
+            network.AuthenticationAndCipher.AuthAlgo == DOT11_AUTH_ALGORITHM.DOT11_AUTH_ALGO_WPA3_PSK)
+            return true;
+
+        // Check if it's an ad-hoc or infrastructure network that looks like WFD
+        if (network.AuthenticationAndCipher.CipherAlgo != DOT11_CIPHER_ALGORITHM.DOT11_CIPHER_ALGO_NONE &&
+            network.AuthenticationAndCipher.AuthAlgo != DOT11_AUTH_ALGORITHM.DOT11_AUTH_ALGO_80211_OPEN)
+        {
+            // Has security enabled - could be WFD
+            // Additional heuristics could be applied here
+        }
+
+        return false;
     }
 
-    private List<Guid> GetWlanInterfaces() {
-        var interfaces = new List<Guid>();
-        // Enumerate WLAN interfaces - simplified for Windows Desktop
-        // Full implementation requires WlanEnumInterfaces
-        return interfaces;
+    private DeviceInfo? CreateDeviceFromNetwork(WLAN_AVAILABLE_NETWORK network, Guid interfaceGuid)
+    {
+        var networkName = network.strNetworkName ?? string.Empty;
+        if (string.IsNullOrEmpty(networkName))
+            return null;
+
+        return new DeviceInfo
+        {
+            Id = $"wfd-{networkName.GetHashCode():X8}",
+            Name = networkName,
+            IpAddress = string.Empty, // WFD devices get IP after connection
+            Type = DeviceType.Miracast,
+            State = DeviceState.Available,
+            Properties = new Dictionary<string, string>
+            {
+                ["interface"] = interfaceGuid.ToString(),
+                ["signal"] = network.dwSignalQuality.ToString(),
+                ["profile"] = network.strProfileName ?? string.Empty,
+                ["security"] = $"{network.AuthenticationAndCipher.AuthAlgo}/{network.AuthenticationAndCipher.CipherAlgo}"
+            }
+        };
     }
 
-    public async Task StopDiscoveryAsync() {
+    public async Task StopDiscoveryAsync()
+    {
+        System.Diagnostics.Debug.WriteLine("WiFiDirectDiscovery: Stopping discovery");
+
         _cts?.Cancel();
-        if (_discoveryTask != null) {
-            try {
+
+        if (_discoveryTask != null)
+        {
+            try
+            {
                 await _discoveryTask.WaitAsync(TimeSpan.FromSeconds(5));
-            } catch (OperationCanceledException) {
+            }
+            catch (OperationCanceledException)
+            {
                 // Expected
-            } catch (TimeoutException) {
-                // Task did not complete in time
+            }
+            catch (TimeoutException)
+            {
+                System.Diagnostics.Debug.WriteLine("WiFiDirectDiscovery: Task did not complete in time");
             }
         }
-        CloseWlanHandle();
+
+        _wfdHelper?.Dispose();
+        _wfdHelper = null;
     }
 
-    private void CloseWlanHandle() {
-        if (_wlanHandle != IntPtr.Zero) {
-            WlanApi.WlanCloseHandle(_wlanHandle, IntPtr.Zero);
-            _wlanHandle = IntPtr.Zero;
-        }
-    }
-
-    public void Dispose() {
-        if (!_disposed) {
+    public void Dispose()
+    {
+        if (!_disposed)
+        {
             _cts?.Cancel();
-            CloseWlanHandle();
+            _wfdHelper?.Dispose();
             _cts?.Dispose();
             _disposed = true;
         }

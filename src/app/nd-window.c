@@ -223,6 +223,12 @@ sink_create_audio_source_cb (NdWindow * self, NdSink * sink)
   return g_object_ref_sink (res);
 }
 
+static gboolean auto_connect_enabled = FALSE;
+static gboolean auto_connect_attempted = FALSE;
+static gchar *target_device_ip = NULL;
+static guint auto_connect_retry_count = 0;
+static const guint MAX_AUTO_CONNECT_RETRIES = 3;
+
 static void
 sink_notify_state_cb (NdWindow *self, GParamSpec *pspec, NdSink *sink)
 {
@@ -280,6 +286,12 @@ sink_notify_state_cb (NdWindow *self, GParamSpec *pspec, NdSink *sink)
       g_list_store_append (self->error_sink_list_model, self->stream_sink);
 
       gtk_stack_set_visible_child_name (self->step_stack, "error");
+
+      /* Retry auto-connect on error if we haven't tried yet */
+      if (auto_connect_enabled && !auto_connect_attempted)
+        {
+          g_warning ("Auto-connect failed, will retry on next device discovery");
+        }
       break;
 
     case ND_SINK_STATE_DISCONNECTED:
@@ -294,8 +306,55 @@ sink_notify_state_cb (NdWindow *self, GParamSpec *pspec, NdSink *sink)
 
       g_signal_handlers_disconnect_by_data (self->stream_sink, self);
       g_clear_object (&self->stream_sink);
+
+      /* Reset auto-connect flag so we can retry */
+      auto_connect_attempted = FALSE;
       break;
     }
+}
+
+static void
+auto_connect_to_sink (NdWindow *self, NdSink *sink);
+
+static void
+sink_list_sink_added_cb (NdSinkListModel *list_model, guint position, guint removed, guint added, NdWindow *self)
+{
+  g_autofree gchar *sink_name = NULL;
+  NdSink *sink;
+
+  /* Only handle new items added */
+  if (added == 0)
+    return;
+
+  /* Skip if already streaming */
+  if (self->stream_sink)
+    return;
+
+  /* Skip if auto-connect is disabled or already attempted */
+  if (!auto_connect_enabled || auto_connect_attempted)
+    return;
+
+  /* Skip if max retries reached */
+  if (auto_connect_retry_count >= MAX_AUTO_CONNECT_RETRIES)
+    {
+      g_debug ("NdWindow: Max auto-connect retries (%u) reached, giving up", MAX_AUTO_CONNECT_RETRIES);
+      return;
+    }
+
+  sink = g_list_model_get_item (G_LIST_MODEL (list_model), position);
+  if (!sink)
+    return;
+
+  /* Get sink display name */
+  g_object_get (sink, "display-name", &sink_name, NULL);
+
+  g_debug ("NdWindow: Discovered sink: %s", sink_name ? sink_name : "(unknown)");
+
+  /* Auto-connect to the first discovered device */
+  auto_connect_attempted = TRUE;
+  auto_connect_retry_count++;
+  g_debug ("NdWindow: Auto-connecting to device (attempt %u/%u)", auto_connect_retry_count, MAX_AUTO_CONNECT_RETRIES);
+  auto_connect_to_sink (self, sink);
 }
 
 gboolean
@@ -381,10 +440,8 @@ nd_screencast_init_cb (GObject      *source_object,
 }
 
 static void
-find_sink_list_row_activated_cb (NdWindow *self, NdSinkRow *row, GtkListBox *sink_list)
+auto_connect_to_sink (NdWindow *self, NdSink *sink)
 {
-  NdSink *sink;
-
   if (!self->use_x11 && !self->portal)
     {
       g_warning ("Cannot start streaming right now as we don't have a portal!");
@@ -406,9 +463,6 @@ find_sink_list_row_activated_cb (NdWindow *self, NdSinkRow *row, GtkListBox *sin
       return;
     }
 
-  g_assert (ND_IS_SINK_ROW (row));
-
-  sink = nd_sink_row_get_sink (row);
   self->stream_sink = nd_sink_start_stream (sink);
 
   if (!self->stream_sink)
@@ -465,6 +519,17 @@ find_sink_list_row_activated_cb (NdWindow *self, NdSinkRow *row, GtkListBox *sin
 
   g_object_set (self->meta_provider, "discover", FALSE, NULL);
   g_list_store_append (self->connect_sink_list_model, self->stream_sink);
+}
+
+static void
+find_sink_list_row_activated_cb (NdWindow *self, NdSinkRow *row, GtkListBox *sink_list)
+{
+  NdSink *sink;
+
+  g_assert (ND_IS_SINK_ROW (row));
+
+  sink = nd_sink_row_get_sink (row);
+  auto_connect_to_sink (self, sink);
 }
 
 static void
@@ -547,6 +612,9 @@ gnome_nd_window_finalize (GObject *obj)
 
   if (self->session)
     g_clear_object (&self->session);
+
+  /* Cleanup auto-connect static variables */
+  g_clear_pointer (&target_device_ip, g_free);
 
   G_OBJECT_CLASS (gnome_nd_window_parent_class)->finalize (obj);
 }
@@ -679,6 +747,27 @@ gnome_nd_window_init (NdWindow *self)
                            (GtkListBoxCreateWidgetFunc) nd_sink_row_new,
                            NULL,
                            NULL);
+
+  /* Check for target IP environment variable (set by --connect-ip) */
+  target_device_ip = g_strdup (g_getenv ("NETWORK_DISPLAYS_TARGET_IP"));
+  if (target_device_ip != NULL)
+    {
+      auto_connect_enabled = TRUE;
+      g_debug ("NdWindow: Target IP is set to: %s", target_device_ip);
+    }
+  /* Check for auto-connect environment variable */
+  else if (g_getenv ("NETWORK_DISPLAYS_AUTO_CONNECT") != NULL)
+    {
+      auto_connect_enabled = TRUE;
+      g_debug ("NdWindow: Auto-connect is enabled");
+    }
+
+  /* Connect to sink list model to auto-connect when devices are discovered */
+  g_signal_connect_object (self->find_sink_list_model,
+                           "items-changed",
+                           (GCallback) sink_list_sink_added_cb,
+                           self,
+                           G_CONNECT_SWAPPED);
 
   g_signal_connect_object (self->find_sink_list,
                            "row-activated",
