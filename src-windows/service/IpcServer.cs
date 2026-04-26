@@ -11,7 +11,7 @@ using SharedDeviceInfo = Gnd.Windows.Shared.DeviceInfo;
 namespace Gnd.Windows.Service;
 
 /// <summary>
-/// IPC Server managing both gRPC and Named Pipe communication.
+/// IPC Server managing Named Pipe communication.
 /// Routes messages to device providers (Miracast, Chromecast).
 /// </summary>
 public class IpcServer : IDisposable
