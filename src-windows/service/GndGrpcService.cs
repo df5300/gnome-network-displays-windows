@@ -11,10 +11,10 @@ namespace Gnd.Windows.Service;
 /// </summary>
 public class GndGrpcService : GndGrpc.GndService.GndServiceBase
 {
-    private readonly ILogger<GndGrpcService> _logger;
+    private readonly Microsoft.Extensions.Logging.ILogger _logger;
     private readonly IServiceProvider _serviceProvider;
 
-    public GndGrpcService(ILogger<GndGrpcService> logger, IServiceProvider serviceProvider)
+    public GndGrpcService(Microsoft.Extensions.Logging.ILogger logger, IServiceProvider serviceProvider)
     {
         _logger = logger;
         _serviceProvider = serviceProvider;

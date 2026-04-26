@@ -4,7 +4,6 @@ using System.Text.Json;
 using Gnd.Windows.Shared;
 using Gnd.Windows.Grpc;
 using Grpc.Core;
-using Microsoft.Extensions.Logging;
 
 using GrpcDeviceInfo = Gnd.Windows.Grpc.DeviceInfo;
 using GrpcDeviceState = Gnd.Windows.Grpc.DeviceState;
@@ -18,10 +17,10 @@ namespace Gnd.Windows.Service;
 /// </summary>
 public class IpcServer : IDisposable
 {
-    private readonly ILogger<IpcServer> _logger;
+    private readonly Microsoft.Extensions.Logging.ILogger<IpcServer> _logger;
     private readonly Dictionary<string, Func<IpcMessage, Task<IpcMessage>>> _handlers = new();
     private CancellationTokenSource? _cts;
-    private Server? _grpcServer;
+    private Grpc.Core.Server? _grpcServer;
     private Task? _namedPipeServerTask;
     private bool _disposed;
 
@@ -33,7 +32,7 @@ public class IpcServer : IDisposable
     public event EventHandler<DeviceEventArgs>? DeviceLost;
     public event EventHandler<DeviceEventArgs>? DeviceStateChanged;
 
-    public IpcServer(ILogger<IpcServer> logger)
+    public IpcServer(Microsoft.Extensions.Logging.ILogger<IpcServer> logger)
     {
         _logger = logger;
         RegisterHandlers();
