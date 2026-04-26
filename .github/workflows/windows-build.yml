@@ -12,6 +12,11 @@ jobs:
     strategy:
       matrix:
         configuration: [Debug, Release]
+    # Only build service and shared (stream and client require WinUI which needs special setup)
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: src-windows
 
     steps:
     - uses: actions/checkout@v4
@@ -21,41 +26,23 @@ jobs:
       with:
         dotnet-version: '8.0.x'
 
-    - name: Restore
-      run: dotnet restore src-windows/gnome-network-displays.sln
+    - name: Restore shared
+      run: dotnet restore shared/gnome-network-displays.shared.csproj
 
-    - name: Build ${{ matrix.configuration }}
-      run: dotnet build src-windows/gnome-network-displays.sln -c ${{ matrix.configuration }}
+    - name: Build shared (${{ matrix.configuration }})
+      run: dotnet build shared/gnome-network-displays.shared.csproj -c ${{ matrix.configuration }}
+
+    - name: Restore service
+      run: dotnet restore service/gnome-network-displays.service.csproj
+
+    - name: Build service (${{ matrix.configuration }})
+      run: dotnet build service/gnome-network-displays.service.csproj -c ${{ matrix.configuration }}
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
         name: windows-${{ matrix.configuration }}-binaries
-        path: src-windows/**/bin/${{ matrix.configuration }}/**/*.exe
-
-  build-release:
-    runs-on: windows-latest
-    if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: '8.0.x'
-
-    - name: Restore
-      run: dotnet restore src-windows/gnome-network-displays.sln
-
-    - name: Build Release (win-x64)
-      run: dotnet build src-windows/gnome-network-displays.sln -c Release -r win-x64 --self-contained
-
-    - name: Build Release (win-arm64)
-      run: dotnet build src-windows/gnome-network-displays.sln -c Release -r win-arm64 --self-contained
-
-    - name: Upload Artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: windows-release-binaries
-        path: src-windows/**/bin/Release/**/*.exe
+        path: |
+          src-windows/shared/bin/${{ matrix.configuration }}/**/*.dll
+          src-windows/service/bin/${{ matrix.configuration }}/**/*.exe
+          src-windows/service/bin/${{ matrix.configuration }}/**/*.dll

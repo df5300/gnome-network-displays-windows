@@ -25,7 +25,4 @@
   <ItemGroup>
     <Protobuf Include="..\shared\Proto\gnd.proto" GrpcServices="Server" />
   </ItemGroup>
-  <ItemGroup>
-    <Compile Include="Proto\*.cs" />
-  </ItemGroup>
 </Project>
