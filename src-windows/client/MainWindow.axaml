@@ -1,0 +1,89 @@
+<Window x:Class="Gnd.Windows.Client.MainWindow"
+        xmlns="https://github.com/avaloniaui"
+        xmlns:local="using:Gnd.Windows.Client"
+        xmlns:vm="using:Gnd.Windows.Client.ViewModels"
+        Title="Network Displays"
+        Width="800"
+        Height="600">
+
+    <DockPanel Background="{DynamicResource BackgroundBrush}">
+        <!-- Header -->
+        <Border DockPanel.Dock="Top" Background="#2D2D2D" Padding="20,15">
+            <TextBlock Text="Network Displays"
+                       FontSize="20"
+                       FontWeight="Bold"
+                       Foreground="White" />
+        </Border>
+
+        <!-- Main Content - Two Column Layout -->
+        <Grid ColumnDefinitions="300,*">
+            <!-- Left Column - Device List -->
+            <Border Grid.Column="0" Background="#252525" Padding="10">
+                <DockPanel>
+                    <StackPanel DockPanel.Dock="Top" Margin="0,0,0,10">
+                        <TextBlock Text="Available Devices"
+                                   FontSize="16"
+                                   FontWeight="SemiBold"
+                                   Foreground="White"
+                                   Margin="0,0,0,10" />
+
+                        <!-- Action buttons -->
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <Button Content="Refresh Devices"
+                                    Command="{Binding RefreshDevicesCommand}"
+                                    Margin="0,0,10,0" />
+                            <Button Content="Start Discovery"
+                                    Command="{Binding StartDiscoveryCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Device List -->
+                    <ListBox ItemsSource="{Binding Devices}"
+                             SelectionMode="Single"
+                             Background="Transparent">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate DataType="vm:DeviceViewModel">
+                                <Border Background="#333333" Padding="10" Margin="0,0,0,5" CornerRadius="4">
+                                    <Grid ColumnDefinitions="Auto,*,Auto">
+                                        <TextBlock Grid.Column="0"
+                                                   Text="[D]"
+                                                   FontSize="24"
+                                                   VerticalAlignment="Center"
+                                                   Margin="0,0,10,0"
+                                                   Foreground="{DynamicResource PrimaryBrush}" />
+
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Name}"
+                                                       FontWeight="SemiBold"
+                                                       Foreground="White" />
+                                            <TextBlock Text="{Binding TypeDisplay}"
+                                                       Opacity="0.7"
+                                                       Foreground="#AAAAAA"
+                                                       FontSize="12" />
+                                        </StackPanel>
+
+                                        <Button Grid.Column="2"
+                                                Content="{Binding ConnectButtonText}"
+                                                Command="{Binding ConnectCommand}"
+                                                IsEnabled="{Binding CanConnect}"
+                                                VerticalAlignment="Center" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+
+            <!-- Right Column - Video Player -->
+            <Border Grid.Column="1" Background="#1A1A1A">
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <TextBlock Text="No video playing"
+                               FontSize="18"
+                               Opacity="0.5"
+                               Foreground="White" />
+                </StackPanel>
+            </Border>
+        </Grid>
+    </DockPanel>
+</Window>
