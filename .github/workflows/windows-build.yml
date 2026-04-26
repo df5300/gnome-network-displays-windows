@@ -1,0 +1,61 @@
+name: Windows Build
+
+on:
+  push:
+    branches: [windows-port, master]
+  pull_request:
+    branches: [windows-port, master]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        configuration: [Debug, Release]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore
+      run: dotnet restore src-windows/gnome-network-displays.sln
+
+    - name: Build ${{ matrix.configuration }}
+      run: dotnet build src-windows/gnome-network-displays.sln -c ${{ matrix.configuration }}
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-${{ matrix.configuration }}-binaries
+        path: src-windows/**/bin/${{ matrix.configuration }}/**/*.exe
+
+  build-release:
+    runs-on: windows-latest
+    if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/')
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore
+      run: dotnet restore src-windows/gnome-network-displays.sln
+
+    - name: Build Release (win-x64)
+      run: dotnet build src-windows/gnome-network-displays.sln -c Release -r win-x64 --self-contained
+
+    - name: Build Release (win-arm64)
+      run: dotnet build src-windows/gnome-network-displays.sln -c Release -r win-arm64 --self-contained
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-release-binaries
+        path: src-windows/**/bin/Release/**/*.exe
