@@ -53,21 +53,13 @@ public class WindowsNotifications : IDisposable
         try
         {
             var toastXml = ToastNotificationManager.GetTemplateContent(
-                ToastTemplateType.ToastProgressAndText);
+                ToastTemplateType.ToastText02);
 
             var textNodes = toastXml.GetElementsByTagName("text");
             if (textNodes.Length > 0)
                 textNodes[0].InnerText = title;
             if (textNodes.Length > 1)
-                textNodes[1].InnerText = status;
-
-            // Update progress bar
-            var imageElements = toastXml.GetElementsByTagName("progress");
-            if (imageElements.Length > 0)
-            {
-                imageElements[0].SetAttribute("value", (progress / 100.0).ToString());
-                imageElements[0].SetAttribute("status", status);
-            }
+                textNodes[1].InnerText = $"{status}: {progress:F0}%";
 
             var toast = new ToastNotification(toastXml);
             ToastNotificationManager.CreateToastNotifier(APP_ID).Show(toast);

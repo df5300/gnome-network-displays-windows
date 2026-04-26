@@ -1,5 +1,6 @@
 using System.Net;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace Gnd.Windows.Shared.Platform;
 
@@ -239,7 +240,7 @@ public static class WfdApi
     public const int WFD_CAPABILITY_GC_MANUAL_CONNECTION = 0x0002;
     public const int WFD_CAPABILITY_SERVICE_DISCOVERY = 0x0004;
     public const int WFD_CAPABILITY_PERSISTENT_PSK = 0x0008;
-    public const int WFD_CAPABILITY_SESSION MANAGEMENT = 0x0010;
+    public const int WFD_CAPABILITY_SESSION_MANAGEMENT = 0x0010;
     public const int WFD_CAPABILITY_INVITATION_PROCEDURE = 0x0020;
 
     // WFD Device Type

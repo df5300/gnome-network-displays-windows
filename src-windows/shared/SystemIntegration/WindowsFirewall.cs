@@ -45,11 +45,11 @@ public class WindowsFirewall : IDisposable
         {
             if (_fwPolicy2 != null)
             {
-                return _fwPolicy2.FirewallEnabled[NET_FW_PROFILE_TYPE2.NET_FW_PROFILE2_ALL];
+                return _fwPolicy2.get_FirewallEnabled(NET_FW_PROFILE_TYPE2.NET_FW_PROFILE2_ALL);
             }
-            if (_fwMgr?.LocalPolicy?.CurrentProfile != null)
+            if (_fwMgr?.LocalPolicy != null)
             {
-                return _fwMgr.LocalPolicy.CurrentProfile.FirewallEnabled;
+                return _fwMgr.LocalPolicy.FirewallEnabled;
             }
             return false;
         }
@@ -69,11 +69,11 @@ public class WindowsFirewall : IDisposable
         try
         {
             // Check if rule already exists
-            foreach (INetFwRule rule in _fwPolicy2.Rules)
+            foreach (INetFwRule existingRule in _fwPolicy2.Rules)
             {
-                if (rule.Name == appName)
+                if (existingRule.Name == appName)
                 {
-                    rule.Enabled = enabled;
+                    existingRule.Enabled = enabled;
                     return true;
                 }
             }
@@ -87,8 +87,8 @@ public class WindowsFirewall : IDisposable
 
             rule.Name = appName;
             rule.ApplicationName = appPath;
-            rule.Action = NET_FW_ACTION.NET_FW_ACTION_ALLOW;
-            rule.Direction = NET_FW_RULE_DIRECTION.NET_FW_RULE_DIR_IN;
+            rule.Action = (int)NET_FW_ACTION.NET_FW_ACTION_ALLOW;
+            rule.Direction = (int)NET_FW_RULE_DIRECTION.NET_FW_RULE_DIR_IN;
             rule.Enabled = enabled;
 
             _fwPolicy2.Rules.Add(rule);
@@ -111,11 +111,11 @@ public class WindowsFirewall : IDisposable
         try
         {
             // Check if rule already exists
-            foreach (INetFwRule rule in _fwPolicy2.Rules)
+            foreach (INetFwRule existingRule in _fwPolicy2.Rules)
             {
-                if (rule.Name == ruleName)
+                if (existingRule.Name == ruleName)
                 {
-                    rule.Enabled = enabled;
+                    existingRule.Enabled = enabled;
                     return true;
                 }
             }
@@ -129,8 +129,8 @@ public class WindowsFirewall : IDisposable
             rule.Name = ruleName;
             rule.Protocol = protocol == "TCP" ? 6 : 17; // TCP=6, UDP=17
             rule.LocalPorts = port.ToString();
-            rule.Action = NET_FW_ACTION.NET_FW_ACTION_ALLOW;
-            rule.Direction = NET_FW_RULE_DIRECTION.NET_FW_RULE_DIR_IN;
+            rule.Action = (int)NET_FW_ACTION.NET_FW_ACTION_ALLOW;
+            rule.Direction = (int)NET_FW_RULE_DIRECTION.NET_FW_RULE_DIR_IN;
             rule.Enabled = enabled;
 
             _fwPolicy2.Rules.Add(rule);
@@ -192,20 +192,27 @@ internal class NetFwPolicy2 { }
 [ComImport, Guid("9C4F7BB5-66F8-498B-8868-31CCAC8151C4")]
 internal class NetFwRule { }
 
+[ComImport, Guid("E2B3C97F-6EB1-49B3-9315-DB4DA85D0C60"), InterfaceType(ComInterfaceType.InterfaceIsDual)]
+internal interface INetFwPolicy
+{
+    INetFwMgr? CurrentProfile { get; }
+    bool FirewallEnabled { get; set; }
+}
+
 [ComImport, Guid("A6207B2E-7D3D-4725-9C1F-18AC4870C77E"), InterfaceType(ComInterfaceType.InterfaceIsDual)]
 internal interface INetFwMgr
 {
     INetFwPolicy? LocalPolicy { get; }
     bool LocalPolicyModified { get; }
-    bool CurrentProfileTypes { get; set; }
-    object[] Enabled { get; }
+    int CurrentProfileTypes { get; set; }
 }
 
 [ComImport, Guid("83DA8326-2A9C-46A0-9446-943D4E93F04F"), InterfaceType(ComInterfaceType.InterfaceIsDual)]
 internal interface INetFwPolicy2
 {
     int CurrentProfileTypes { get; }
-    object FirewallEnabled { get; set; }
+    bool get_FirewallEnabled(NET_FW_PROFILE_TYPE2 profileType);
+    void set_FirewallEnabled(NET_FW_PROFILE_TYPE2 profileType, bool value);
     INetFwRules Rules { get; }
 }
 
@@ -230,10 +237,11 @@ internal interface INetFwRule
 }
 
 [ComImport, Guid("A6207B2E-7D3D-4725-9C1F-18AC4870C77E"), InterfaceType(ComInterfaceType.InterfaceIsDual)]
-internal interface INetFwRules
+internal interface INetFwRules : System.Collections.IEnumerable
 {
     int Count { get; }
-    INetFwRule Item { get; }
+    INetFwRule get_Item(object identifier);
+    System.Collections.IEnumerator GetEnumerator();
     void Add(INetFwRule rule);
     void Remove(string name);
     INetFwRule CreateRule();

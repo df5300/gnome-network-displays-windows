@@ -6,6 +6,9 @@ using Gnd.Windows.Grpc;
 using Grpc.Core;
 using Microsoft.Extensions.Logging;
 
+using GrpcDeviceInfo = Gnd.Windows.Grpc.DeviceInfo;
+using GrpcDeviceState = Gnd.Windows.Grpc.DeviceState;
+
 namespace Gnd.Windows.Service;
 
 /// <summary>
@@ -281,8 +284,8 @@ public class IpcServer : IDisposable
 
 public class DeviceEventArgs : EventArgs
 {
-    public required DeviceInfo Device { get; init; }
+    public required GrpcDeviceInfo Device { get; init; }
     public string? Message { get; init; }
-    public DeviceState? OldState { get; init; }
-    public DeviceState? NewState { get; init; }
+    public GrpcDeviceState? OldState { get; init; }
+    public GrpcDeviceState? NewState { get; init; }
 }

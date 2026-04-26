@@ -56,7 +56,7 @@ public static class DnsSdApi
     // DNS-SD Callback delegate
     public delegate void DNSServiceDiscoveryCallback(
         IntPtr sdRef,
-        ref DNSServiceFlags flags,
+        uint flags,
         uint interfaceIndex,
         DNSServiceErrorType errorCode,
         string serviceName,
@@ -227,11 +227,22 @@ public class DnsSdContext : IDisposable
     {
         var flags = new DNSServiceFlags();
 
-        var callback = new DnsSdApi.DNSServiceDiscoveryCallback((sdRef, flags, interfaceIndex, errorCode, serviceName, regType, domain, context) =>
+        DnsSdApi.DNSServiceDiscoveryCallback callback = delegate(
+            IntPtr sdRef,
+            uint rawFlags,
+            uint interfaceIndex,
+            DNSServiceErrorType errorCode,
+            string serviceName,
+            string regType,
+            string domainName,
+            IntPtr context)
         {
-            if (errorCode == (int)DNSServiceErrorType.NoError)
+            if (errorCode == DNSServiceErrorType.NoError)
             {
-                if (flags.Lost)
+                bool lost = (rawFlags & DnsSdApi.kDNSServiceFlagsLost) != 0;
+                bool add = (rawFlags & DnsSdApi.kDNSServiceFlagsAdd) != 0;
+
+                if (lost)
                 {
                     lock (_services)
                     {
@@ -241,7 +252,7 @@ public class DnsSdContext : IDisposable
                         }
                     }
                 }
-                else if (flags.Add)
+                else if (add)
                 {
                     lock (_services)
                     {
@@ -251,7 +262,7 @@ public class DnsSdContext : IDisposable
                             {
                                 Name = serviceName,
                                 Type = regType,
-                                Domain = domain,
+                                Domain = domainName,
                                 InterfaceIndex = interfaceIndex
                             };
                             _services[serviceName] = info;
@@ -260,7 +271,7 @@ public class DnsSdContext : IDisposable
                     }
                 }
             }
-        });
+        };
 
         var error = DnsSdApi.DNSServiceBrowse(
             out _browseRef,

@@ -7,8 +7,17 @@ public class WiFiDirectProvider : IDisposable {
     private readonly WiFiDirectDiscovery _discovery;
     private bool _disposed;
 
-    public event EventHandler<DeviceDiscoveredEventArgs>? DeviceFound => _discovery.DeviceFound;
-    public event EventHandler<string>? DeviceLost => _discovery.DeviceLost;
+    public event EventHandler<DeviceDiscoveredEventArgs>? DeviceFound
+    {
+        add => _discovery.DeviceFound += value;
+        remove => _discovery.DeviceFound -= value;
+    }
+
+    public event EventHandler<string>? DeviceLost
+    {
+        add => _discovery.DeviceLost += value;
+        remove => _discovery.DeviceLost -= value;
+    }
 
     public WiFiDirectProvider() {
         _discovery = new WiFiDirectDiscovery();

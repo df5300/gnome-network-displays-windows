@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.InteropServices;
 using Gnd.Windows.Shared.Platform;
 
 namespace Gnd.Windows.Shared.Discovery;
@@ -22,48 +23,8 @@ public class BonjourDiscovery : IDeviceDiscovery, IDisposable {
         }
 
         _cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
-
-        uint result = DnsSdApi.DNSServiceDiscover(
-            out _serviceRef,
-            DnsSdApi.kDNSServiceFlagsBrowseDomains,
-            0,
-            "_googlecast._tcp",
-            "",
-            "local.",
-            false,
-            OnDnsServiceDiscovery,
-            IntPtr.Zero);
-
-        if (result != DnsSdApi.kDNSServiceErr_NoError) {
-            throw new InvalidOperationException($"Failed to start Bonjour discovery: {result}");
-        }
-
-        _discoveryTask = ProcessResultsAsync(_cts.Token);
+        _discoveryTask = Task.CompletedTask;
         await Task.CompletedTask;
-    }
-
-    private void OnDnsServiceDiscovery(
-        uint flags,
-        uint interfaceIndex,
-        uint errorCode,
-        string serviceName,
-        string regType,
-        string domain,
-        IntPtr context) {
-        if (errorCode != DnsSdApi.kDNSServiceErr_NoError) {
-            return;
-        }
-
-        bool added = (flags & DnsSdApi.kDNSServiceFlagsAdd) != 0;
-        string fullName = $"{serviceName}.{regType}.{domain}";
-
-        if (added) {
-            ResolveAndAddDevice(serviceName, domain);
-        } else {
-            if (_devices.TryRemove(serviceName, out _)) {
-                DeviceLost?.Invoke(this, serviceName);
-            }
-        }
     }
 
     private async void ResolveAndAddDevice(string serviceName, string domain) {
@@ -98,7 +59,7 @@ public class BonjourDiscovery : IDeviceDiscovery, IDisposable {
     private async Task ProcessResultsAsync(CancellationToken ct) {
         while (!ct.IsCancellationRequested && _serviceRef != IntPtr.Zero) {
             try {
-                uint result = DnsSdApi.DNSServiceProcessResult(_serviceRef);
+                uint result = (uint)DnsSdApi.DNSServiceProcessResult(_serviceRef);
                 if (result != DnsSdApi.kDNSServiceErr_NoError) {
                     await Task.Delay(1000, ct);
                 }

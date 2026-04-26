@@ -7,12 +7,13 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <Platforms>x64;ARM64</Platforms>
     <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.5.240227000" />
-    <PackageReference Include="Vortice.Windows.MediaFoundation" Version="2.1.1.2" />
-    <PackageReference Include="Vortice.Windows.Direct3D11" Version="2.1.1.2" />
-    <PackageReference Include="Vortice.Windows.DXGI" Version="2.1.1.2" />
+    <PackageReference Include="Vortice.MediaFoundation" Version="2.1.1.2" />
+    <PackageReference Include="Vortice.Direct3D11" Version="2.1.1.2" />
+    <PackageReference Include="Vortice.DXGI" Version="2.1.1.2" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
   </ItemGroup>
   <ItemGroup>

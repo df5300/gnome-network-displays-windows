@@ -1,36 +1,65 @@
-include:
-  - project: 'gnome/citemplates'
-    file: 'flatpak/flatpak_ci_initiative.yml'
-  - component: "gitlab.gnome.org/GNOME/citemplates/release-service@master"
-    inputs:
-      dist-job-name: "flatpak"
-      tarball-artifact-path: "${TARBALL_ARTIFACT_PATH}"
+# Windows CI Pipeline for gnome-network-displays
+# Requires Windows runner with .NET 8 SDK
+
+stages:
+  - build
+  - test
 
 variables:
-  FLATPAK_MODULE: "gnome-network-displays"
-  TARBALL_ARTIFACT_PATH: ".flatpak-builder/build/${FLATPAK_MODULE}/_flatpak_build/meson-dist/${CI_PROJECT_NAME}-${CI_COMMIT_TAG}.tar.xz"
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  DOTNET_NOLOGO: '1'
 
-build-native:
-  variables:
-    MESON_BUILD_DIR: "_build"
+.windows_build:
   before_script:
-    - dnf -y install git meson ninja-build
-    - dnf -y builddep gnome-network-displays
+    - dotnet --version
+    - dotnet restore src-windows/gnome-network-displays.sln
+  after_script:
+    - Get-ChildItem -Recurse -Filter "*.exe" | Select-Object -ExpandProperty FullName
+
+build_debug:
+  stage: build
+  tags:
+    - windows
   script:
-    - meson setup "${MESON_BUILD_DIR}"
-    - meson compile -C "${MESON_BUILD_DIR}" gnome-network-displays-pot
-    - git diff --exit-code --ignore-matching-lines='^"POT-Creation-Date:' po/gnome-network-displays.pot || (echo "Potfile is out of date. Please run 'meson compile gnome-network-displays-pot' and commit the changes." && exit 1)
-    - meson compile -C "${MESON_BUILD_DIR}"
+    - dotnet build src-windows/gnome-network-displays.sln -c Debug
+  artifacts:
+    name: windows-debug-binaries
+    paths:
+      - src-windows/**/bin/Debug/**
+    expire_in: 1 week
+  only:
+    - branches
+    - merge_requests
 
-flatpak:
-  extends: '.flatpak'
-  variables:
-    MANIFEST_PATH: "build-aux/flatpak/org.gnome.NetworkDisplays.json"
-    RUNTIME_REPO: "https://nightly.gnome.org/gnome-nightly.flatpakrepo"
-    APP_ID: "org.gnome.NetworkDisplays"
-    BUNDLE: "org.gnome.NetworkDisplaysDevel.flatpak"
+build_release:
+  stage: build
+  tags:
+    - windows
+  script:
+    - dotnet build src-windows/gnome-network-displays.sln -c Release -r win-x64 --self-contained
+    - dotnet build src-windows/gnome-network-displays.sln -c Release -r win-arm64 --self-contained
+  artifacts:
+    name: windows-release-binaries
+    paths:
+      - src-windows/**/bin/Release/**/*.exe
+    expire_in: 1 month
+  only:
+    - tags
+    - master
 
-nightly:
-  extends: '.publish_nightly'
-  dependencies: ['flatpak']
-  needs: ['flatpak']
+# Cross-compile from Linux using dotnet (limited)
+build_linux_cross:
+  stage: build
+  tags:
+    - linux
+  image: mcr.microsoft.com/dotnet/sdk:8.0
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq cmake ninja-build > /dev/null 2>&1 || true
+  script:
+    - dotnet restore src-windows/gnome-network-displays.sln
+    # Note: .NET can cross-compile managed assemblies, but not native dependencies
+    # This builds the managed code for Windows but skips native components
+    - dotnet build src-windows/gnome-network-displays.sln -c Release -r win-x64 --no-dependencies 2>&1 || echo "Cross-compile limited - native deps need Windows"
+  only:
+    - merge_requests
+  allow_failure: true

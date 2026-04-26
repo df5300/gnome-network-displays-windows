@@ -62,7 +62,7 @@ public class WindowsAudio : IDisposable
 
             if (collection != null)
             {
-                collection.GetCount(out int count);
+                collection.GetCount(out uint count);
                 for (int i = 0; i < count; i++)
                 {
                     collection.Item((uint)i, out IMMDevice? device);
@@ -143,7 +143,7 @@ internal interface IMMDevice
 {
     int Activate(ref Guid iid, CLSCTX dwClsCtx, IntPtr pActivationParams, [MarshalAs(UnmanagedType.IUnknown)] out object ppInterface);
     int OpenPropertyStore(STGM_ACCESS access, out IPropertyStore ppProperties);
-    int.GetId([MarshalAs(UnmanagedType.LPWStr)] out string ppstrId);
+    int GetId([MarshalAs(UnmanagedType.LPWStr)] out string ppstrId);
     int GetState(out DEVICE_STATE pdwState);
 }
 
@@ -196,6 +196,12 @@ internal struct PropertyKey
 {
     public Guid fmtid;
     public int pid;
+
+    public PropertyKey(Guid fmtid, int pid)
+    {
+        this.fmtid = fmtid;
+        this.pid = pid;
+    }
 }
 
 internal enum EDataFlow

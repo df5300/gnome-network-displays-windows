@@ -17,8 +17,7 @@ public class ServiceManager : IDisposable
 
     public ServiceManager()
     {
-        _logger = LoggerFactory.Create(builder => builder.AddConsole())
-            .CreateLogger<ServiceManager>();
+        _logger = new ConsoleLogger<ServiceManager>();
     }
 
     /// <summary>
@@ -190,6 +189,8 @@ public class ConsoleLogger<T> : ILogger<T>
 {
     public void LogInformation(string message, params object[] args) =>
         Console.WriteLine($"[INFO] {string.Format(message, args)}");
+    public void LogError(string message, params object[] args) =>
+        Console.WriteLine($"[ERROR] {string.Format(message, args)}");
     public void LogError(Exception ex, string message, params object[] args) =>
         Console.WriteLine($"[ERROR] {string.Format(message, args)}: {ex.Message}");
     public void LogWarning(string message, params object[] args) =>
@@ -199,6 +200,7 @@ public class ConsoleLogger<T> : ILogger<T>
 public interface ILogger<T>
 {
     void LogInformation(string message, params object[] args);
+    void LogError(string message, params object[] args);
     void LogError(Exception ex, string message, params object[] args);
     void LogWarning(string message, params object[] args);
 }

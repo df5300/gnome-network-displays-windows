@@ -193,7 +193,7 @@ public enum WfdSessionState
     Error
 }
 
-public class RtspCapabilities
+public class WfdCapabilities
 {
     public List<VideoCodec> VideoCodecs { get; set; } = new();
     public List<AudioCodec> AudioCodecs { get; set; } = new();
