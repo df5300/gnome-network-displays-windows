@@ -3,7 +3,6 @@ using System.Text;
 using System.Text.Json;
 using Gnd.Windows.Shared;
 using Gnd.Windows.Grpc;
-using Grpc.Core;
 
 using GrpcDeviceInfo = Gnd.Windows.Grpc.DeviceInfo;
 using GrpcDeviceState = Gnd.Windows.Grpc.DeviceState;
@@ -20,7 +19,7 @@ public class IpcServer : IDisposable
     private readonly Microsoft.Extensions.Logging.ILogger<IpcServer> _logger;
     private readonly Dictionary<string, Func<IpcMessage, Task<IpcMessage>>> _handlers = new();
     private CancellationTokenSource? _cts;
-    private Grpc.Core.Server? _grpcServer;
+    private global::Grpc.Core.Server? _grpcServer;
     private Task? _namedPipeServerTask;
     private bool _disposed;
 
