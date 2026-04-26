@@ -23,6 +23,9 @@
     <ProjectReference Include="..\shared\gnome-network-displays.shared.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <Protobuf Include="..\shared\Proto\gnd.proto" GrpcServices="Server" />
+    <!-- Include generated proto files from Proto directory -->
+    <Protobuf Include="Proto\Gnd.proto" />
+    <Compile Include="Proto\Gnd.cs" />
+    <Compile Include="Proto\GndGrpc.cs" />
   </ItemGroup>
 </Project>
