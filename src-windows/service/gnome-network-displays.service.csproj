@@ -23,9 +23,6 @@
     <ProjectReference Include="..\shared\gnome-network-displays.shared.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <!-- Include generated proto files from Proto directory -->
-    <Protobuf Include="Proto\Gnd.proto" />
-    <Compile Include="Proto\Gnd.cs" />
-    <Compile Include="Proto\GndGrpc.cs" />
+    <!-- Proto files are included by default SDK globbing -->
   </ItemGroup>
 </Project>
