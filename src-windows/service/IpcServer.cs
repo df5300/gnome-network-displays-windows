@@ -6,6 +6,7 @@ using Gnd.Windows.Grpc;
 
 using GrpcDeviceInfo = Gnd.Windows.Grpc.DeviceInfo;
 using GrpcDeviceState = Gnd.Windows.Grpc.DeviceState;
+using GrpcDeviceType = Gnd.Windows.Grpc.DeviceType;
 using SharedDeviceInfo = Gnd.Windows.Shared.DeviceInfo;
 
 namespace Gnd.Windows.Service;
@@ -155,7 +156,16 @@ public class IpcServer : IDisposable
     {
         _logger.LogInformation("Discover requested");
         // TODO: Start discovery via providers
-        DeviceFound?.Invoke(this, new DeviceEventArgs { Device = CreateStubDevice() });
+        var stubDevice = CreateStubDevice();
+        DeviceFound?.Invoke(this, new DeviceEventArgs {
+            Device = new GrpcDeviceInfo {
+                Id = stubDevice.Id,
+                Name = stubDevice.Name,
+                IpAddress = stubDevice.IpAddress,
+                Type = GrpcDeviceType.DeviceTypeMiracast,
+                State = GrpcDeviceState.DeviceStateAvailable
+            }
+        });
         return Task.FromResult(CreateSuccessResponse(message, "Discovery started"));
     }
 
