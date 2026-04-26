@@ -9,10 +9,6 @@ on:
 jobs:
   build:
     runs-on: windows-latest
-    strategy:
-      matrix:
-        configuration: [Debug, Release]
-    # Only build service and shared (stream and client require WinUI which needs special setup)
     defaults:
       run:
         shell: pwsh
@@ -29,20 +25,20 @@ jobs:
     - name: Restore shared
       run: dotnet restore shared/gnome-network-displays.shared.csproj
 
-    - name: Build shared (${{ matrix.configuration }})
-      run: dotnet build shared/gnome-network-displays.shared.csproj -c ${{ matrix.configuration }}
+    - name: Build shared
+      run: dotnet build shared/gnome-network-displays.shared.csproj -c Debug --no-restore
 
     - name: Restore service
       run: dotnet restore service/gnome-network-displays.service.csproj
 
-    - name: Build service (${{ matrix.configuration }})
-      run: dotnet build service/gnome-network-displays.service.csproj -c ${{ matrix.configuration }}
+    - name: Build service
+      run: dotnet build service/gnome-network-displays.service.csproj -c Debug --no-restore
 
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: windows-${{ matrix.configuration }}-binaries
+        name: windows-debug-binaries
         path: |
-          src-windows/shared/bin/${{ matrix.configuration }}/**/*.dll
-          src-windows/service/bin/${{ matrix.configuration }}/**/*.exe
-          src-windows/service/bin/${{ matrix.configuration }}/**/*.dll
+          src-windows/shared/bin/Debug/**/*.dll
+          src-windows/service/bin/Debug/**/*.exe
+          src-windows/service/bin/Debug/**/*.dll
