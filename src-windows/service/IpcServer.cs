@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 
 using GrpcDeviceInfo = Gnd.Windows.Grpc.DeviceInfo;
 using GrpcDeviceState = Gnd.Windows.Grpc.DeviceState;
+using SharedDeviceInfo = Gnd.Windows.Shared.DeviceInfo;
 
 namespace Gnd.Windows.Service;
 
@@ -206,7 +207,7 @@ public class IpcServer : IDisposable
     {
         _logger.LogInformation("GetDevices requested");
         // TODO: Return list of discovered devices from providers
-        var devices = new List<DeviceInfo> { CreateStubDevice() };
+        var devices = new List<SharedDeviceInfo> { CreateStubDevice() };
         var payload = JsonSerializer.Serialize(devices);
         return Task.FromResult(CreateSuccessResponse(message, payload));
     }
@@ -259,9 +260,9 @@ public class IpcServer : IDisposable
         };
     }
 
-    private static DeviceInfo CreateStubDevice()
+    private static SharedDeviceInfo CreateStubDevice()
     {
-        return new DeviceInfo
+        return new SharedDeviceInfo
         {
             Id = "stub-" + Guid.NewGuid().ToString("N")[..8],
             Name = "Stub Device",

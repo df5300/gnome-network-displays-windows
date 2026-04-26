@@ -3,7 +3,6 @@ using Gnd.Windows.Shared;
 using Gnd.Windows.Shared.Discovery;
 using Microsoft.Extensions.Logging;
 using GndGrpc = Gnd.Windows.Grpc;
-using ILoggerInterface = Microsoft.Extensions.Logging.ILogger;
 
 namespace Gnd.Windows.Service;
 
@@ -12,10 +11,10 @@ namespace Gnd.Windows.Service;
 /// </summary>
 public class GndGrpcService : GndGrpc.GndService.GndServiceBase
 {
-    private readonly ILoggerInterface<GndGrpcService> _logger;
+    private readonly ILogger<GndGrpcService> _logger;
     private readonly IServiceProvider _serviceProvider;
 
-    public GndGrpcService(ILoggerInterface<GndGrpcService> logger, IServiceProvider serviceProvider)
+    public GndGrpcService(ILogger<GndGrpcService> logger, IServiceProvider serviceProvider)
     {
         _logger = logger;
         _serviceProvider = serviceProvider;

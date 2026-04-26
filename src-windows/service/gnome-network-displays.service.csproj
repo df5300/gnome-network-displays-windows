@@ -17,12 +17,15 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="System.Text.Json" Version="8.0.0" />
+    <PackageReference Include="System.Text.Json" Version="8.0.5" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\shared\gnome-network-displays.shared.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Protobuf Include="..\shared\Proto\gnd.proto" GrpcServices="Server" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Proto\*.cs" />
   </ItemGroup>
 </Project>
