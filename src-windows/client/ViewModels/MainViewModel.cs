@@ -3,13 +3,16 @@ using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Gnd.Windows.Shared;
 using Gnd.Windows.Client.Services;
+using SharedDeviceInfo = Gnd.Windows.Shared.DeviceInfo;
+using SharedDeviceState = Gnd.Windows.Shared.DeviceState;
 
 namespace Gnd.Windows.Client.ViewModels;
 
 public partial class MainViewModel : ObservableObject
 {
-    private readonly IServiceClient _serviceClient;
+    private readonly GrpcServiceClient _serviceClient;
 
     [ObservableProperty]
     private ObservableCollection<DeviceViewModel> _devices = new();
@@ -29,7 +32,7 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private bool _isDiscovering;
 
-    public MainViewModel(IServiceClient serviceClient)
+    public MainViewModel(GrpcServiceClient serviceClient)
     {
         _serviceClient = serviceClient;
         _serviceClient.DeviceDiscovered += OnDeviceDiscovered;
@@ -37,7 +40,7 @@ public partial class MainViewModel : ObservableObject
         _playerViewModel = new PlayerViewModel();
     }
 
-    private void OnDeviceDiscovered(object? sender, DeviceInfo e)
+    private void OnDeviceDiscovered(object? sender, SharedDeviceInfo e)
     {
         // Check if device already exists
         foreach (var device in Devices)
@@ -123,12 +126,12 @@ public partial class MainViewModel : ObservableObject
 
         IsConnecting = true;
         StatusText = $"Connecting to {device.Name}...";
-        device.State = DeviceState.Connecting;
+        device.State = SharedDeviceState.Connecting;
 
         try
         {
             await _serviceClient.ConnectAsync(device.Id);
-            device.State = DeviceState.Connected;
+            device.State = SharedDeviceState.Connected;
             StatusText = $"Connected to {device.Name}";
 
             // Stream URL would be obtained and passed to PlayerViewModel
@@ -136,7 +139,7 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            device.State = DeviceState.Error;
+            device.State = SharedDeviceState.Error;
             StatusText = $"Failed to connect: {ex.Message}";
         }
         finally

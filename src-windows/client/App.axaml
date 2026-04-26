@@ -1,5 +1,6 @@
 <Application x:Class="Gnd.Windows.Client.App"
              xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="using:Gnd.Windows.Client">
     <Application.Resources>
         <ResourceDictionary>

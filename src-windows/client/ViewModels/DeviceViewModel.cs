@@ -1,24 +1,9 @@
 using System;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Gnd.Windows.Client.Services;
+using Gnd.Windows.Shared;
 
 namespace Gnd.Windows.Client.ViewModels;
-
-public enum DeviceType
-{
-    Unknown,
-    Sink,
-    Source
-}
-
-public enum DeviceState
-{
-    Disconnected,
-    Connecting,
-    Connected,
-    Error
-}
 
 public partial class DeviceViewModel : ObservableObject
 {
@@ -26,8 +11,8 @@ public partial class DeviceViewModel : ObservableObject
 
     public string Id => _deviceInfo.Id;
     public string Name => _deviceInfo.Name;
+    public string Address => _deviceInfo.IpAddress;
     public DeviceType Type => _deviceInfo.Type;
-    public string Address => _deviceInfo.Address;
 
     [ObservableProperty]
     private DeviceState _state;
@@ -37,8 +22,8 @@ public partial class DeviceViewModel : ObservableObject
 
     public string TypeDisplay => Type switch
     {
-        DeviceType.Sink => "Wireless Display (Sink)",
-        DeviceType.Source => "Media Source",
+        DeviceType.Miracast => "Wireless Display (Miracast)",
+        DeviceType.Chromecast => "Chromecast",
         _ => "Unknown Device"
     };
 
@@ -56,7 +41,7 @@ public partial class DeviceViewModel : ObservableObject
     {
         _deviceInfo = deviceInfo;
         _state = deviceInfo.State;
-        _canConnect = deviceInfo.IsConnectable && State != DeviceState.Connecting;
+        _canConnect = State != DeviceState.Connecting;
     }
 
     [RelayCommand]

@@ -10,4 +10,20 @@
   <ItemGroup>
     <PackageReference Include="System.DirectoryServices" Version="8.0.0" />
   </ItemGroup>
+
+  <!-- Exclude Windows-only files on non-Windows platforms -->
+  <ItemGroup Condition="'$(TargetFramework)' != 'net8.0-windows10.0.19041.0'">
+    <Compile Remove="SystemIntegration\WindowsNotifications.cs" />
+    <Compile Remove="SystemIntegration\WindowsFirewall.cs" />
+    <Compile Remove="SystemIntegration\WindowsAudio.cs" />
+    <Compile Remove="Platform\WlanApi.cs" />
+    <Compile Remove="Platform\DnsSdApi.cs" />
+    <Compile Remove="Discovery\WiFiDirectDiscovery.cs" />
+    <Compile Remove="Discovery\BonjourDiscovery.cs" />
+  </ItemGroup>
+
+  <!-- Include Windows-specific files when targeting Windows -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net8.0-windows10.0.19041.0'">
+    <PackageReference Include="Microsoft.Toolkit.Uwp.Notifications" Version="7.1.3" />
+  </ItemGroup>
 </Project>

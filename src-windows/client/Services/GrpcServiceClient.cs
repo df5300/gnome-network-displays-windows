@@ -5,23 +5,25 @@ using Grpc.Net.Client;
 using Grpc.Core;
 using Gnd.Windows.Shared;
 using Gnd.Windows.Grpc;
+using SharedDeviceInfo = Gnd.Windows.Shared.DeviceInfo;
+using SharedDeviceType = Gnd.Windows.Shared.DeviceType;
+using SharedDeviceState = Gnd.Windows.Shared.DeviceState;
 
 namespace Gnd.Windows.Client.Services;
 
-public class GrpcServiceClient : IServiceClient, IDisposable
+public class GrpcServiceClient : IDisposable
 {
     private readonly GndService.GndServiceClient _client;
     private readonly GrpcChannel _channel;
     private readonly ILogger<GrpcServiceClient> _logger;
     private bool _disposed;
 
-    public event EventHandler<DeviceInfo>? DeviceDiscovered;
+    public event EventHandler<SharedDeviceInfo>? DeviceDiscovered;
     public event EventHandler<string>? DeviceLost;
 
     public GrpcServiceClient(string serverAddress = "http://localhost:5050")
     {
-        _logger = LoggerFactory.Create(builder => builder.AddConsole())
-            .CreateLogger<GrpcServiceClient>();
+        _logger = LoggerFactory.CreateLogger<GrpcServiceClient>();
 
         // Configure gRPC channel
         var handler = new SocketsHttpHandler
@@ -40,14 +42,14 @@ public class GrpcServiceClient : IServiceClient, IDisposable
         _client = new GndService.GndServiceClient(_channel);
     }
 
-    public async Task<List<DeviceInfo>> GetDevicesAsync()
+    public async Task<List<SharedDeviceInfo>> GetDevicesAsync()
     {
         try
         {
             var request = new GetDevicesRequest();
             var response = await _client.GetDevicesAsync(request);
 
-            var devices = new List<DeviceInfo>();
+            var devices = new List<SharedDeviceInfo>();
             foreach (var device in response.Devices)
             {
                 devices.Add(ConvertDevice(device));
@@ -59,7 +61,7 @@ public class GrpcServiceClient : IServiceClient, IDisposable
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to get devices");
-            return new List<DeviceInfo>();
+            return new List<SharedDeviceInfo>();
         }
     }
 
@@ -147,7 +149,7 @@ public class GrpcServiceClient : IServiceClient, IDisposable
         }
     }
 
-    public async Task StartStreamAsync(string deviceId, VideoCodec videoCodec = VideoCodec.VideoCodecH264, AudioCodec audioCodec = AudioCodec.AudioCodecAac)
+    public async Task StartStreamAsync(string deviceId, VideoCodec videoCodec = VideoCodec.H264, AudioCodec audioCodec = AudioCodec.Aac)
     {
         try
         {
@@ -158,7 +160,7 @@ public class GrpcServiceClient : IServiceClient, IDisposable
                 PreferredAudioCodec = audioCodec,
                 Transport = new TransportConfig
                 {
-                    Type = TransportConfig.TransportType.Tcp,
+                    Type = TransportConfig.Types.TransportType.Tcp,
                     LocalIp = "0.0.0.0",
                     VideoPort = 0,
                     AudioPort = 0
@@ -211,9 +213,9 @@ public class GrpcServiceClient : IServiceClient, IDisposable
         {
             var request = new StreamEventsRequest
             {
-                Events = { StreamEventsRequest.DeviceEventType.EventTypeDeviceFound,
-                          StreamEventsRequest.DeviceEventType.EventTypeDeviceLost,
-                          StreamEventsRequest.DeviceEventType.EventTypeStateChanged }
+                Events = { StreamEventsRequest.Types.DeviceEventType.EventTypeDeviceFound,
+                          StreamEventsRequest.Types.DeviceEventType.EventTypeDeviceLost,
+                          StreamEventsRequest.Types.DeviceEventType.EventTypeStateChanged }
             };
 
             using var call = _client.StreamEvents(request);
@@ -224,10 +226,10 @@ public class GrpcServiceClient : IServiceClient, IDisposable
                 {
                     switch (deviceEvent.Type)
                     {
-                        case DeviceEvent.EventTypeDeviceFound:
+                        case DeviceEvent.Types.DeviceEventType.EventTypeDeviceFound:
                             DeviceDiscovered?.Invoke(this, ConvertDevice(deviceEvent.Device));
                             break;
-                        case DeviceEvent.EventTypeDeviceLost:
+                        case DeviceEvent.Types.DeviceEventType.EventTypeDeviceLost:
                             DeviceLost?.Invoke(this, deviceEvent.DeviceId);
                             break;
                     }
@@ -244,9 +246,9 @@ public class GrpcServiceClient : IServiceClient, IDisposable
         }
     }
 
-    private static DeviceInfo ConvertDevice(Gnd.Windows.Grpc.DeviceInfo grpcDevice)
+    private static SharedDeviceInfo ConvertDevice(Gnd.Windows.Grpc.DeviceInfo grpcDevice)
     {
-        return new DeviceInfo
+        return new SharedDeviceInfo
         {
             Id = grpcDevice.Id,
             Name = grpcDevice.Name,
@@ -254,18 +256,18 @@ public class GrpcServiceClient : IServiceClient, IDisposable
             Port = grpcDevice.Port,
             Type = grpcDevice.Type switch
             {
-                DeviceType.DeviceTypeMiracast => DeviceType.Miracast,
-                DeviceType.DeviceTypeChromecast => DeviceType.Chromecast,
-                _ => DeviceType.Miracast
+                Gnd.Windows.Grpc.DeviceType.Miracast => SharedDeviceType.Miracast,
+                Gnd.Windows.Grpc.DeviceType.Chromecast => SharedDeviceType.Chromecast,
+                _ => SharedDeviceType.Miracast
             },
             State = grpcDevice.State switch
             {
-                DeviceState.DeviceStateAvailable => DeviceState.Available,
-                DeviceState.DeviceStateConnecting => DeviceState.Connecting,
-                DeviceState.DeviceStateConnected => DeviceState.Connected,
-                DeviceState.DeviceStateStreaming => DeviceState.Streaming,
-                DeviceState.DeviceStateError => DeviceState.Error,
-                _ => DeviceState.Available
+                Gnd.Windows.Grpc.DeviceState.Available => SharedDeviceState.Available,
+                Gnd.Windows.Grpc.DeviceState.Connecting => SharedDeviceState.Connecting,
+                Gnd.Windows.Grpc.DeviceState.Connected => SharedDeviceState.Connected,
+                Gnd.Windows.Grpc.DeviceState.Streaming => SharedDeviceState.Streaming,
+                Gnd.Windows.Grpc.DeviceState.Error => SharedDeviceState.Error,
+                _ => SharedDeviceState.Available
             }
         };
     }
@@ -290,8 +292,7 @@ public interface ILogger<T>
 
 public class LoggerFactory
 {
-    public static LoggerFactory Create(Action<ILoggingBuilder> configure) => new();
-    public ILogger<T> CreateLogger<T>() => new ConsoleLogger<T>();
+    public static ILogger<T> CreateLogger<T>() => new ConsoleLogger<T>();
 }
 
 public class ConsoleLogger<T> : ILogger<T>
@@ -302,9 +303,4 @@ public class ConsoleLogger<T> : ILogger<T>
         System.Console.WriteLine($"[ERROR] {string.Format(message, args)}: {ex.Message}");
     public void LogWarning(string message, params object[] args) =>
         System.Console.WriteLine($"[WARN] {string.Format(message, args)}");
-}
-
-public class Action<ILoggingBuilder>
-{
-    public void AddConsole() { }
 }

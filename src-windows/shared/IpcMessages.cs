@@ -20,6 +20,7 @@ public class DeviceInfo {
     public string Id { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string IpAddress { get; set; } = string.Empty;
+    public int Port { get; set; }
     public DeviceType Type { get; set; }
     public DeviceState State { get; set; }
 }

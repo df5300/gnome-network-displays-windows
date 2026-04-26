@@ -1,5 +1,6 @@
 <Window x:Class="Gnd.Windows.Client.MainWindow"
         xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="using:Gnd.Windows.Client"
         xmlns:vm="using:Gnd.Windows.Client.ViewModels"
         Title="Network Displays"

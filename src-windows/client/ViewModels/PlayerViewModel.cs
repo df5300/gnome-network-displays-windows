@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using LibVLCSharp.Shared;
+using LibVLCSharp.Avalonia;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -86,10 +87,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     [RelayCommand]
     private void Play()
     {
-        if (_mediaPlayer.CanPlay)
-        {
-            _mediaPlayer.Play();
-        }
+        _mediaPlayer.Play();
     }
 
     [RelayCommand]
@@ -122,7 +120,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
             IsPlaying = false;
             IsPaused = false;
 
-            using var media = new Media(_libVLC, new Uri(url), FromType.FromLocation);
+            using var media = new Media(_libVLC, new Uri(url));
 
             // Wait for media to be ready
             await media.Parse(MediaParseOptions.ParseLocal);

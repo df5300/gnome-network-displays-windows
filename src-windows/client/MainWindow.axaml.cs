@@ -1,4 +1,6 @@
+using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Media;
 using Gnd.Windows.Client.ViewModels;
 
 namespace Gnd.Windows.Client;
