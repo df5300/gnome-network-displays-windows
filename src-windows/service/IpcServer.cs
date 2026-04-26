@@ -19,11 +19,9 @@ public class IpcServer : IDisposable
     private readonly Microsoft.Extensions.Logging.ILogger<IpcServer> _logger;
     private readonly Dictionary<string, Func<IpcMessage, Task<IpcMessage>>> _handlers = new();
     private CancellationTokenSource? _cts;
-    private global::Grpc.Core.Server? _grpcServer;
     private Task? _namedPipeServerTask;
     private bool _disposed;
 
-    public const int GrpcPort = 5050;
     public const string NamedPipeName = "gnome-network-displays-ipc";
 
     // Events for device state changes
@@ -66,49 +64,9 @@ public class IpcServer : IDisposable
         _logger.LogInformation("IPC Server stopping");
         _cts?.Cancel();
 
-        if (_grpcServer != null)
-        {
-            await _grpcServer.ShutdownAsync();
-        }
-
         if (_namedPipeServerTask != null)
         {
             await Task.WhenAny(_namedPipeServerTask, Task.Delay(Timeout.Infinite, cancellationToken));
-        }
-    }
-
-    /// <summary>
-    /// Start the gRPC server directly (alternative to using Kestrel)
-    /// </summary>
-    public async Task StartGrpcServerAsync(CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Starting gRPC server on port {Port}", GrpcPort);
-
-        _grpcServer = new Grpc.Core.Server
-        {
-            Services =
-            {
-                GndService.BindService(new GndGrpcService(
-                    LoggerFactory.Create(builder => builder.AddConsole()).CreateLogger<GndGrpcService>(),
-                    null!))
-            },
-            Ports = { new ServerPort("localhost", GrpcPort, ServerCredentials.Insecure) }
-        };
-
-        _grpcServer.Start();
-        _logger.LogInformation("gRPC server started on port {Port}", GrpcPort);
-
-        try
-        {
-            await Task.Delay(Timeout.Infinite, cancellationToken);
-        }
-        catch (OperationCanceledException)
-        {
-            _logger.LogInformation("gRPC server shutting down");
-        }
-        finally
-        {
-            await _grpcServer.ShutdownAsync();
         }
     }
 
@@ -275,7 +233,6 @@ public class IpcServer : IDisposable
         if (!_disposed)
         {
             _cts?.Cancel();
-            _grpcServer?.ShutdownAsync().Wait();
             _disposed = true;
         }
     }
