@@ -15,6 +15,12 @@ public partial class MainViewModel : ObservableObject
     private ObservableCollection<DeviceViewModel> _devices = new();
 
     [ObservableProperty]
+    private DeviceViewModel? _selectedDevice;
+
+    [ObservableProperty]
+    private PlayerViewModel _playerViewModel;
+
+    [ObservableProperty]
     private bool _isConnecting;
 
     [ObservableProperty]
@@ -28,39 +34,33 @@ public partial class MainViewModel : ObservableObject
         _serviceClient = serviceClient;
         _serviceClient.DeviceDiscovered += OnDeviceDiscovered;
         _serviceClient.DeviceLost += OnDeviceLost;
+        _playerViewModel = new PlayerViewModel();
     }
 
     private void OnDeviceDiscovered(object? sender, DeviceInfo e)
     {
-        // Dispatch to UI thread
-        App.Current?.DispatcherQueue?.TryEnqueue(() =>
+        // Check if device already exists
+        foreach (var device in Devices)
         {
-            // Check if device already exists
-            foreach (var device in Devices)
-            {
-                if (device.Id == e.Id)
-                    return;
-            }
-            Devices.Add(new DeviceViewModel(e));
-        });
+            if (device.Id == e.Id)
+                return;
+        }
+        Devices.Add(new DeviceViewModel(e));
     }
 
     private void OnDeviceLost(object? sender, string e)
     {
-        App.Current?.DispatcherQueue?.TryEnqueue(() =>
+        DeviceViewModel? deviceToRemove = null;
+        foreach (var device in Devices)
         {
-            DeviceViewModel? deviceToRemove = null;
-            foreach (var device in Devices)
+            if (device.Id == e)
             {
-                if (device.Id == e)
-                {
-                    deviceToRemove = device;
-                    break;
-                }
+                deviceToRemove = device;
+                break;
             }
-            if (deviceToRemove != null)
-                Devices.Remove(deviceToRemove);
-        });
+        }
+        if (deviceToRemove != null)
+            Devices.Remove(deviceToRemove);
     }
 
     [RelayCommand]
@@ -70,15 +70,12 @@ public partial class MainViewModel : ObservableObject
         try
         {
             var devices = await _serviceClient.GetDevicesAsync();
-            await App.Current!.DispatcherQueue!.TryEnqueueAsync(() =>
+            Devices.Clear();
+            foreach (var d in devices)
             {
-                Devices.Clear();
-                foreach (var d in devices)
-                {
-                    Devices.Add(new DeviceViewModel(d));
-                }
-                StatusText = $"Found {devices.Count} device(s)";
-            });
+                Devices.Add(new DeviceViewModel(d));
+            }
+            StatusText = $"Found {devices.Count} device(s)";
         }
         catch (Exception ex)
         {
@@ -133,6 +130,9 @@ public partial class MainViewModel : ObservableObject
             await _serviceClient.ConnectAsync(device.Id);
             device.State = DeviceState.Connected;
             StatusText = $"Connected to {device.Name}";
+
+            // Stream URL would be obtained and passed to PlayerViewModel
+            // StartStreamAsync(device.Id) would be called here when needed
         }
         catch (Exception ex)
         {
