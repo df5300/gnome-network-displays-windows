@@ -1,21 +1,14 @@
-
+﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "gnome-network-displays.shared", "shared\gnome-network-displays.shared.csproj", "{B2C3D4E5-F6A7-8901-BCDE-F12345678901}"
 EndProject
-
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "gnome-network-displays.service", "service\gnome-network-displays.service.csproj", "{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}"
 EndProject
-
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "gnome-network-displays.client", "client\gnome-network-displays.client.csproj", "{C2D3E4F5-A6B7-8901-CDEF-012345678902}"
 EndProject
-
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "gnome-network-displays.stream", "stream\gnome-network-displays.stream.csproj", "{D3E4F5A6-B7C8-9012-DEF0-123456789013}"
-EndProject
-
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -26,36 +19,26 @@ Global
 		Release|ARM64 = Release|ARM64
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug|x64.ActiveCfg = Debug|x64
-		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug|x64.Build.0 = Debug|x64
-		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Release|Any CPU.Build.0 = Release|Any CPU
 		{B2C3D4E5-F6A7-8901-BCDE-F12345678901}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{B2C3D4E5-F6A7-8901-BCDE-F12345678901}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B2C3D4E5-F6A7-8901-BCDE-F12345678901}.Debug|x64.ActiveCfg = Debug|x64
 		{B2C3D4E5-F6A7-8901-BCDE-F12345678901}.Debug|x64.Build.0 = Debug|x64
 		{B2C3D4E5-F6A7-8901-BCDE-F12345678901}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B2C3D4E5-F6A7-8901-BCDE-F12345678901}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug|x64.ActiveCfg = Debug|x64
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Debug|x64.Build.0 = Debug|x64
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}.Release|Any CPU.Build.0 = Release|Any CPU
 		{C2D3E4F5-A6B7-8901-CDEF-012345678902}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{C2D3E4F5-A6B7-8901-CDEF-012345678902}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C2D3E4F5-A6B7-8901-CDEF-012345678902}.Debug|x64.ActiveCfg = Debug|x64
 		{C2D3E4F5-A6B7-8901-CDEF-012345678902}.Debug|x64.Build.0 = Debug|x64
 		{C2D3E4F5-A6B7-8901-CDEF-012345678902}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C2D3E4F5-A6B7-8901-CDEF-012345678902}.Release|Any CPU.Build.0 = Release|Any CPU
-		{D3E4F5A6-B7C8-9012-DEF0-123456789013}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{D3E4F5A6-B7C8-9012-DEF0-123456789013}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{D3E4F5A6-B7C8-9012-DEF0-123456789013}.Debug|x64.ActiveCfg = Debug|x64
-		{D3E4F5A6-B7C8-9012-DEF0-123456789013}.Debug|x64.Build.0 = Debug|x64
-		{D3E4F5A6-B7C8-9012-DEF0-123456789013}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{D3E4F5A6-B7C8-9012-DEF0-123456789013}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(NestedProjects) = preSolution
-		{B2C3D4E5-F6A7-8901-BCDE-F12345678901} = {A1B2C3D4-E5F6-7890-ABCD-EF1234567890}
-		{A1B2C3D4-E5F6-7890-ABCD-EF1234567890} = {C2D3E4F5-A6B7-8901-CDEF-012345678902}
 	EndGlobalSection
 EndGlobal
