@@ -10,6 +10,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
+    <Compile Include="ServiceMain.cs" />
     <Compile Include="GndGrpcService.cs" />
     <Compile Include="IpcServer.cs" />
     <Compile Include="Generated\Gnd.cs" />
@@ -17,6 +18,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.0" />
     <PackageReference Include="Grpc.AspNetCore" Version="2.60.0" />
     <PackageReference Include="Grpc.Core.Api" Version="2.60.0" />
     <PackageReference Include="Google.Protobuf" Version="3.25.1" />

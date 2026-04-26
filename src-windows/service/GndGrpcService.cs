@@ -77,8 +77,8 @@ public class GndGrpcService : GndGrpc.GndService.GndServiceBase
                 Name = "Stub Device",
                 IpAddress = "192.168.1.100",
                 Port = 7236,
-                Type = GndGrpc.DeviceType.DeviceTypeMiracast,
-                State = GndGrpc.DeviceState.DeviceStateAvailable
+                Type = GndGrpc.DeviceType.Miracast,
+                State = GndGrpc.DeviceState.Available
             });
         }
         catch (Exception ex)
@@ -104,8 +104,8 @@ public class GndGrpcService : GndGrpc.GndService.GndServiceBase
                 SupportsVideo = true,
                 SupportsAudio = true
             };
-            response.Capabilities.SupportedVideoCodecs.Add(GndGrpc.VideoCodec.VideoCodecH264);
-            response.Capabilities.SupportedAudioCodecs.Add(GndGrpc.AudioCodec.AudioCodecAac);
+            response.Capabilities.SupportedVideoCodecs.Add(GndGrpc.VideoCodec.H264);
+            response.Capabilities.SupportedAudioCodecs.Add(GndGrpc.AudioCodec.Aac);
         }
         catch (Exception ex)
         {
@@ -193,7 +193,7 @@ public class GndGrpcService : GndGrpc.GndService.GndServiceBase
             {
                 await responseStream.WriteAsync(new GndGrpc.DeviceEvent
                 {
-                    Type = GndGrpc.DeviceEvent.DeviceEventType.EventTypeDeviceFound,
+                    Type = GndGrpc.DeviceEvent.Types.DeviceEventType.EventTypeDeviceFound,
                     DeviceId = device.Id,
                     Device = device
                 });

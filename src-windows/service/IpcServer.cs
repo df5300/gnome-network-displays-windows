@@ -82,7 +82,7 @@ public class IpcServer : IDisposable
                 using var server = new NamedPipeServerStream(
                     NamedPipeName,
                     PipeDirection.InOut,
-                    NamedPipeServer.MaxAllowedServerInstances,
+                    NamedPipeServerStream.MaxAllowedServerInstances,
                     PipeTransmissionMode.Byte,
                     PipeOptions.Asynchronous);
 
@@ -162,8 +162,8 @@ public class IpcServer : IDisposable
                 Id = stubDevice.Id,
                 Name = stubDevice.Name,
                 IpAddress = stubDevice.IpAddress,
-                Type = GrpcDeviceType.DeviceTypeMiracast,
-                State = GrpcDeviceState.DeviceStateAvailable
+                Type = GrpcDeviceType.Miracast,
+                State = GrpcDeviceState.Available
             }
         });
         return Task.FromResult(CreateSuccessResponse(message, "Discovery started"));
@@ -233,8 +233,8 @@ public class IpcServer : IDisposable
             Id = "stub-" + Guid.NewGuid().ToString("N")[..8],
             Name = "Stub Device",
             IpAddress = "192.168.1.100",
-            Type = DeviceType.Miracast,
-            State = DeviceState.Available
+            Type = Gnd.Windows.Shared.DeviceType.Miracast,
+            State = Gnd.Windows.Shared.DeviceState.Available
         };
     }
 
