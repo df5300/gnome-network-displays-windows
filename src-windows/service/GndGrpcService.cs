@@ -20,11 +20,11 @@ public class GndGrpcService : GndGrpc.GndService.GndServiceBase
         _serviceProvider = serviceProvider;
     }
 
-    public override async Task<StartDiscoveryResponse> StartDiscovery(StartDiscoveryRequest request, ServerCallContext context)
+    public override async Task<GndGrpc.StartDiscoveryResponse> StartDiscovery(GndGrpc.StartDiscoveryRequest request, ServerCallContext context)
     {
         _logger.LogInformation("StartDiscovery requested, force_refresh={ForceRefresh}", request.ForceRefresh);
 
-        var response = new StartDiscoveryResponse();
+        var response = new GndGrpc.StartDiscoveryResponse();
 
         try
         {
@@ -41,11 +41,11 @@ public class GndGrpcService : GndGrpc.GndService.GndServiceBase
         return response;
     }
 
-    public override async Task<StopDiscoveryResponse> StopDiscovery(StopDiscoveryRequest request, ServerCallContext context)
+    public override async Task<GndGrpc.StopDiscoveryResponse> StopDiscovery(GndGrpc.StopDiscoveryRequest request, ServerCallContext context)
     {
         _logger.LogInformation("StopDiscovery requested");
 
-        var response = new StopDiscoveryResponse();
+        var response = new GndGrpc.StopDiscoveryResponse();
 
         try
         {
@@ -61,24 +61,24 @@ public class GndGrpcService : GndGrpc.GndService.GndServiceBase
         return response;
     }
 
-    public override async Task<GetDevicesResponse> GetDevices(GetDevicesRequest request, ServerCallContext context)
+    public override async Task<GndGrpc.GetDevicesResponse> GetDevices(GndGrpc.GetDevicesRequest request, ServerCallContext context)
     {
         _logger.LogInformation("GetDevices requested");
 
-        var response = new GetDevicesResponse();
+        var response = new GndGrpc.GetDevicesResponse();
 
         try
         {
             // TODO: Get device list from discovery service
             // For now, return empty list
-            response.Devices.Add(new DeviceInfo
+            response.Devices.Add(new GndGrpc.DeviceInfo
             {
                 Id = "stub-device",
                 Name = "Stub Device",
                 IpAddress = "192.168.1.100",
                 Port = 7236,
-                Type = DeviceType.DeviceTypeMiracast,
-                State = DeviceState.DeviceStateAvailable
+                Type = GndGrpc.DeviceType.DeviceTypeMiracast,
+                State = GndGrpc.DeviceState.DeviceStateAvailable
             });
         }
         catch (Exception ex)
@@ -89,23 +89,23 @@ public class GndGrpcService : GndGrpc.GndService.GndServiceBase
         return response;
     }
 
-    public override async Task<ConnectResponse> Connect(ConnectRequest request, ServerCallContext context)
+    public override async Task<GndGrpc.ConnectResponse> Connect(GndGrpc.ConnectRequest request, ServerCallContext context)
     {
         _logger.LogInformation("Connect requested for device {DeviceId}", request.DeviceId);
 
-        var response = new ConnectResponse();
+        var response = new GndGrpc.ConnectResponse();
 
         try
         {
             // TODO: Get provider and connect to device
             response.Success = true;
-            response.Capabilities = new DeviceCapabilities
+            response.Capabilities = new GndGrpc.DeviceCapabilities
             {
                 SupportsVideo = true,
                 SupportsAudio = true
             };
-            response.Capabilities.SupportedVideoCodecs.Add(VideoCodec.VideoCodecH264);
-            response.Capabilities.SupportedAudioCodecs.Add(AudioCodec.AudioCodecAac);
+            response.Capabilities.SupportedVideoCodecs.Add(GndGrpc.VideoCodec.VideoCodecH264);
+            response.Capabilities.SupportedAudioCodecs.Add(GndGrpc.AudioCodec.AudioCodecAac);
         }
         catch (Exception ex)
         {
@@ -117,11 +117,11 @@ public class GndGrpcService : GndGrpc.GndService.GndServiceBase
         return response;
     }
 
-    public override async Task<DisconnectResponse> Disconnect(DisconnectRequest request, ServerCallContext context)
+    public override async Task<GndGrpc.DisconnectResponse> Disconnect(GndGrpc.DisconnectRequest request, ServerCallContext context)
     {
         _logger.LogInformation("Disconnect requested for device {DeviceId}", request.DeviceId);
 
-        var response = new DisconnectResponse();
+        var response = new GndGrpc.DisconnectResponse();
 
         try
         {
@@ -138,11 +138,11 @@ public class GndGrpcService : GndGrpc.GndService.GndServiceBase
         return response;
     }
 
-    public override async Task<StartStreamResponse> StartStream(StartStreamRequest request, ServerCallContext context)
+    public override async Task<GndGrpc.StartStreamResponse> StartStream(GndGrpc.StartStreamRequest request, ServerCallContext context)
     {
         _logger.LogInformation("StartStream requested for device {DeviceId}", request.DeviceId);
 
-        var response = new StartStreamResponse();
+        var response = new GndGrpc.StartStreamResponse();
 
         try
         {
@@ -160,11 +160,11 @@ public class GndGrpcService : GndGrpc.GndService.GndServiceBase
         return response;
     }
 
-    public override async Task<StopStreamResponse> StopStream(StopStreamRequest request, ServerCallContext context)
+    public override async Task<GndGrpc.StopStreamResponse> StopStream(GndGrpc.StopStreamRequest request, ServerCallContext context)
     {
         _logger.LogInformation("StopStream requested for device {DeviceId}", request.DeviceId);
 
-        var response = new StopStreamResponse();
+        var response = new GndGrpc.StopStreamResponse();
 
         try
         {
@@ -181,19 +181,19 @@ public class GndGrpcService : GndGrpc.GndService.GndServiceBase
         return response;
     }
 
-    public override async Task StreamEvents(StreamEventsRequest request, IServerStreamWriter<DeviceEvent> responseStream, ServerCallContext context)
+    public override async Task StreamEvents(GndGrpc.StreamEventsRequest request, IServerStreamWriter<GndGrpc.DeviceEvent> responseStream, ServerCallContext context)
     {
         _logger.LogInformation("StreamEvents started");
 
         try
         {
             // Send initial device list
-            var devicesResponse = await GetDevices(new GetDevicesRequest(), context);
+            var devicesResponse = await GetDevices(new GndGrpc.GetDevicesRequest(), context);
             foreach (var device in devicesResponse.Devices)
             {
-                await responseStream.WriteAsync(new DeviceEvent
+                await responseStream.WriteAsync(new GndGrpc.DeviceEvent
                 {
-                    Type = DeviceEvent.EventTypeDeviceFound,
+                    Type = GndGrpc.DeviceEvent.DeviceEventType.EventTypeDeviceFound,
                     DeviceId = device.Id,
                     Device = device
                 });
