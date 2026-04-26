@@ -14,8 +14,8 @@
     <Compile Include="Program.cs" />
     <Compile Include="GndGrpcService.cs" />
     <Compile Include="IpcServer.cs" />
-    <Compile Include="Generated\Gnd.cs" />
-    <Compile Include="Generated\GndGrpc.cs" />
+    <!-- <Compile Include="Generated\Gnd.cs" /> -->
+    <!-- <Compile Include="Generated\GndGrpc.cs" /> -->
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
