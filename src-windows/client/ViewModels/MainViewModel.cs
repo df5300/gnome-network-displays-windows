@@ -38,6 +38,9 @@ public partial class MainViewModel : ObservableObject
         _serviceClient.DeviceDiscovered += OnDeviceDiscovered;
         _serviceClient.DeviceLost += OnDeviceLost;
         _playerViewModel = new PlayerViewModel();
+
+        // Auto-refresh devices on startup
+        _ = RefreshDevices();
     }
 
     private void OnDeviceDiscovered(object? sender, SharedDeviceInfo e)
