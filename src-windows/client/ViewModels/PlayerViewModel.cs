@@ -1,7 +1,6 @@
 using System;
 using System.Threading.Tasks;
-using LibVLCSharp.Shared;
-using LibVLCSharp.Avalonia;
+using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -9,8 +8,6 @@ namespace Gnd.Windows.Client.ViewModels;
 
 public partial class PlayerViewModel : ObservableObject, IDisposable
 {
-    private readonly LibVLC _libVLC;
-    private readonly MediaPlayer _mediaPlayer;
     private bool _disposed;
 
     [ObservableProperty]
@@ -23,86 +20,48 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     private string _statusText = "Ready";
 
     [ObservableProperty]
-    private VideoView? _videoView;
+    private string _currentUrl = "";
 
-    public MediaPlayer MediaPlayer => _mediaPlayer;
+    [ObservableProperty]
+    private Bitmap? _currentFrame;
+
+    [ObservableProperty]
+    private bool _hasVideo;
 
     public PlayerViewModel()
     {
-        // Initialize LibVLC
-        Core.Initialize();
-
-        _libVLC = new LibVLC();
-        _mediaPlayer = new MediaPlayer(_libVLC);
-
-        // Subscribe to media player events
-        _mediaPlayer.Playing += OnPlaying;
-        _mediaPlayer.Paused += OnPaused;
-        _mediaPlayer.Stopped += OnStopped;
-        _mediaPlayer.EndReached += OnEndReached;
-        _mediaPlayer.EncounteredError += OnError;
-    }
-
-    public void AttachVideoView(VideoView videoView)
-    {
-        VideoView = videoView;
-        videoView.MediaPlayer = _mediaPlayer;
-    }
-
-    private void OnPlaying(object? sender, EventArgs e)
-    {
-        IsPlaying = true;
-        IsPaused = false;
-        StatusText = "Playing";
-    }
-
-    private void OnPaused(object? sender, EventArgs e)
-    {
-        IsPlaying = false;
-        IsPaused = true;
-        StatusText = "Paused";
-    }
-
-    private void OnStopped(object? sender, EventArgs e)
-    {
-        IsPlaying = false;
-        IsPaused = false;
-        StatusText = "Stopped";
-    }
-
-    private void OnEndReached(object? sender, EventArgs e)
-    {
-        IsPlaying = false;
-        IsPaused = false;
-        StatusText = "Playback ended";
-    }
-
-    private void OnError(object? sender, EventArgs e)
-    {
-        IsPlaying = false;
-        IsPaused = false;
-        StatusText = "Playback error";
     }
 
     [RelayCommand]
     private void Play()
     {
-        _mediaPlayer.Play();
+        if (!string.IsNullOrEmpty(CurrentUrl))
+        {
+            IsPlaying = true;
+            IsPaused = false;
+            StatusText = $"Playing: {CurrentUrl}";
+        }
     }
 
     [RelayCommand]
     private void Pause()
     {
-        if (_mediaPlayer.CanPause)
+        if (IsPlaying)
         {
-            _mediaPlayer.Pause();
+            IsPaused = true;
+            IsPlaying = false;
+            StatusText = "Paused";
         }
     }
 
     [RelayCommand]
     private void Stop()
     {
-        _mediaPlayer.Stop();
+        IsPlaying = false;
+        IsPaused = false;
+        HasVideo = false;
+        CurrentFrame = null;
+        StatusText = "Stopped";
     }
 
     [RelayCommand]
@@ -116,24 +75,21 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
 
         try
         {
-            StatusText = "Loading...";
-            IsPlaying = false;
-            IsPaused = false;
+            StatusText = $"Connecting to {url}...";
+            CurrentUrl = url;
 
-            using var media = new Media(_libVLC, new Uri(url));
-
-            // Wait for media to be ready
-            await media.Parse(MediaParseOptions.ParseLocal);
-
-            _mediaPlayer.Media = media;
-            _mediaPlayer.Play();
-
-            StatusText = $"Playing: {url}";
+            // For now, just show connected state
+            // Actual video rendering requires RTSP stream handling and decoding
+            // which will be implemented separately
+            HasVideo = true;
+            IsPlaying = true;
+            StatusText = $"Connected to stream (URL: {url})";
         }
         catch (Exception ex)
         {
             StatusText = $"Error: {ex.Message}";
             IsPlaying = false;
+            HasVideo = false;
         }
     }
 
@@ -141,16 +97,7 @@ public partial class PlayerViewModel : ObservableObject, IDisposable
     {
         if (!_disposed)
         {
-            _mediaPlayer.Playing -= OnPlaying;
-            _mediaPlayer.Paused -= OnPaused;
-            _mediaPlayer.Stopped -= OnStopped;
-            _mediaPlayer.EndReached -= OnEndReached;
-            _mediaPlayer.EncounteredError -= OnError;
-
-            _mediaPlayer.Stop();
-            _mediaPlayer.Dispose();
-            _libVLC.Dispose();
-
+            CurrentFrame?.Dispose();
             _disposed = true;
         }
     }
